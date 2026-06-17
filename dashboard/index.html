@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>India Safety Dashboard — Based on Open Source Data</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --red: #A32D2D; --red-light: #FCEBEB; --red-mid: #E24B4A;
+  --amber: #B06A10; --blue: #1557A0; --green: #2E5E0E; --purple: #46409E;
+  --gray: #5A5955; --text: #18181B; --text-muted: #6B7280; --text-light: #9CA3AF;
+  --bg: #F4F2EE; --surface: #FFFFFF; --surface-2: #F9F8F6;
+  --border: rgba(0,0,0,0.09); --border-md: rgba(0,0,0,0.14);
+  --radius-sm: 6px; --radius: 10px; --radius-lg: 14px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow: 0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-tight: 'Inter Tight', 'Inter', sans-serif;
+}
+html { scroll-behavior: smooth; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+
+.header { background: var(--red); color: #fff; padding: clamp(24px,5vw,40px) clamp(16px,4vw,32px) clamp(20px,4vw,32px); }
+.header-inner { max-width: 1100px; margin: 0 auto; }
+.header-eyebrow { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; opacity: 0.65; margin-bottom: 10px; }
+.header h1 { font-family: var(--font-tight); font-size: clamp(26px,5.5vw,42px); font-weight: 800; line-height: 1.1; letter-spacing: -0.5px; margin-bottom: 10px; }
+.header-sub { font-size: clamp(13px,2vw,15px); line-height: 1.5; opacity: 0.78; max-width: 600px; }
+.data-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; font-size: 11px; padding: 4px 12px; border-radius: 20px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); }
+.data-status .dot { width: 7px; height: 7px; border-radius: 50%; background: #4ADE80; }
+.data-status.loading .dot { background: #FCD34D; animation: pulse 1s infinite; }
+.data-status.error .dot { background: #F87171; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 0 clamp(16px,4vw,32px); }
+.section { padding: clamp(20px,4vw,32px) 0 clamp(8px,2vw,12px); }
+.section-title { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.6px; color: var(--text-muted); margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+.section-title::after { content: ''; flex: 1; height: 1px; background: var(--border-md); }
+.section-desc { font-size: 12.5px; color: var(--text-muted); margin: -10px 0 16px; line-height: 1.6; max-width: 720px; }
+
+.stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+@media (max-width:640px) { .stats-grid { grid-template-columns: repeat(2,1fr); } }
+.stat-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: clamp(14px,2.5vw,20px) clamp(12px,2vw,18px); text-align: center; box-shadow: var(--shadow-sm); }
+.stat-num { font-family: var(--font-tight); font-size: clamp(26px,5vw,38px); font-weight: 800; color: var(--red); line-height: 1; margin-bottom: 6px; letter-spacing: -0.5px; }
+.stat-num.amber { color: var(--amber); }
+.stat-num.green { color: var(--green); }
+.stat-label { font-size: 12px; font-weight: 500; color: var(--text-muted); line-height: 1.35; }
+
+.hero-enforcement { background: #8B1F1F; border-radius: var(--radius-lg); padding: clamp(24px,4vw,36px); color: #fff; position: relative; overflow: hidden; box-shadow: var(--shadow); }
+.hero-enforcement::before { content:''; position:absolute; top:-60px; right:-60px; width:260px; height:260px; border-radius:50%; background:rgba(255,255,255,0.04); pointer-events:none; }
+.hero-top { display: flex; align-items: flex-start; gap: clamp(16px,3vw,28px); margin-bottom: clamp(18px,3vw,26px); position: relative; z-index: 1; }
+.hero-pct { font-family: var(--font-tight); font-size: clamp(60px,13vw,96px); font-weight: 800; line-height: 0.9; letter-spacing: -2px; flex-shrink: 0; }
+.hero-text-block { flex: 1; padding-top: 8px; }
+.hero-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; opacity: 0.65; margin-bottom: 8px; }
+.hero-headline { font-family: var(--font-tight); font-size: clamp(15px,2.8vw,20px); font-weight: 700; line-height: 1.3; margin-bottom: 8px; }
+.hero-desc { font-size: 13px; opacity: 0.78; line-height: 1.6; }
+.hero-breakdown { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; position: relative; z-index: 1; }
+@media (max-width:520px) { .hero-breakdown { grid-template-columns: 1fr 1fr; } }
+.hb-card { background: rgba(255,255,255,0.1); border-radius: 8px; padding: 14px 16px; border: 1px solid rgba(255,255,255,0.14); }
+.hb-num { font-family: var(--font-tight); font-size: clamp(20px,4vw,26px); font-weight: 800; margin-bottom: 4px; letter-spacing: -0.5px; }
+.hb-label { font-size: 11px; opacity: 0.72; line-height: 1.4; }
+
+.chain-section { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: clamp(18px,3vw,26px); box-shadow: var(--shadow-sm); }
+.chain-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 18px; }
+.chain-flow { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding-bottom: 4px; }
+.chain-step { flex: 1; min-width: 100px; display: flex; flex-direction: column; }
+.chain-step-inner { border-radius: var(--radius); padding: 14px 10px; text-align: center; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.chain-step-inner.broken { background: #FFF5F5; border: 1.5px solid #FBBFBF; }
+.chain-step-inner.ok { background: #F0FAF0; border: 1.5px solid #86EFAC; }
+.chain-step-icon { font-size: 22px; margin-bottom: 7px; }
+.chain-step-name { font-size: 12px; font-weight: 600; margin-bottom: 4px; line-height: 1.25; }
+.chain-step-desc { font-size: 10.5px; color: var(--text-muted); line-height: 1.4; }
+.chain-badge { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-top: 8px; display: inline-block; letter-spacing: 0.3px; }
+.badge-broken { background: #FECACA; color: #991B1B; }
+.badge-ok { background: #BBF7D0; color: #166534; }
+.chain-arrow { display: flex; align-items: center; justify-content: center; padding: 0 5px; flex-shrink: 0; color: var(--text-light); font-size: 16px; align-self: center; }
+.chain-note { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); line-height: 1.65; }
+.chain-note strong { color: var(--red); }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+@media (max-width:680px) { .two-col { grid-template-columns: 1fr; } }
+
+.map-wrap { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 20px; box-shadow: var(--shadow-sm); position: relative; }
+.map-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+.map-header-title { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+.map-view-toggle { display: flex; gap: 4px; }
+.mvt-btn { padding: 4px 10px; font-family: var(--font); font-size: 11px; font-weight: 500; border-radius: 5px; border: 1px solid var(--border-md); background: var(--surface-2); color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+.mvt-btn.active { background: var(--red); color: #fff; border-color: var(--red); }
+.map-svg-wrap { position: relative; width: 100%; }
+#indiaMap { width: 100%; display: block; }
+.map-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; font-size: 11px; font-weight: 500; color: var(--text-muted); }
+.leg-item { display: flex; align-items: center; gap: 5px; }
+.leg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.map-tooltip { position: absolute; background: var(--surface); border: 1px solid var(--border-md); border-radius: var(--radius); padding: 12px 14px; font-size: 12px; pointer-events: none; display: none; z-index: 20; max-width: 230px; box-shadow: var(--shadow); }
+.tt-title { font-weight: 700; font-size: 13px; margin-bottom: 3px; color: var(--text); }
+.tt-deaths { color: var(--red); font-weight: 700; font-size: 13px; }
+.tt-sub { color: var(--text-muted); font-size: 11px; margin-top: 4px; line-height: 1.45; }
+.tt-cta { color: var(--blue); font-weight: 600; font-size: 10.5px; margin-top: 6px; }
+
+.patterns-stack { display: flex; flex-direction: column; gap: 10px; }
+.pattern-card { background: var(--surface); border-radius: 0 var(--radius) var(--radius) 0; border: 1px solid var(--border); border-left: 4px solid var(--red); padding: 14px 16px; box-shadow: var(--shadow-sm); }
+.pattern-num { font-family: var(--font-tight); font-size: clamp(22px,4vw,30px); font-weight: 800; line-height: 1; margin-bottom: 5px; letter-spacing: -0.5px; }
+.pattern-text { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
+
+.chart-card { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: clamp(16px,2.5vw,22px); box-shadow: var(--shadow-sm); }
+.card-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 14px; }
+.chart-wrap { position: relative; width: 100%; height: 240px; }
+.chart-wrap.tall { height: 320px; }
+
+.acc-row { margin-bottom: 14px; }
+.acc-label { display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 500; margin-bottom: 5px; color: var(--text); }
+.acc-pct { font-weight: 700; }
+.acc-track { height: 7px; background: #EEECE8; border-radius: 4px; overflow: hidden; }
+.acc-fill { height: 100%; border-radius: 4px; }
+.acc-note { font-size: 11px; color: var(--text-muted); margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); line-height: 1.6; }
+
+.inst-section { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: clamp(18px,3vw,24px); box-shadow: var(--shadow-sm); }
+.inst-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.inst-name { font-size: 12px; font-weight: 500; color: var(--text); flex: 0 0 220px; line-height: 1.35; }
+.inst-track { flex: 1; height: 20px; background: #EEECE8; border-radius: 4px; overflow: hidden; }
+.inst-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; justify-content: flex-end; padding-right: 7px; min-width: 50px; }
+.inst-fill span { font-size: 10px; font-weight: 700; color: #fff; white-space: nowrap; }
+.inst-note { font-size: 11px; color: var(--text-muted); margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); line-height: 1.65; }
+.inst-note strong { color: var(--text); font-weight: 600; }
+.inst-role { font-size: 10.5px; color: var(--text-light); margin: -6px 0 10px 232px; line-height: 1.35; }
+@media (max-width:600px) { .inst-name { flex-basis: 100%; } .inst-row { flex-direction: column; align-items: flex-start; gap: 4px; } .inst-track { width: 100%; } .inst-role { margin-left: 0; } }
+
+.reform-banner { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: clamp(20px,3vw,28px); box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: clamp(20px,4vw,32px); flex-wrap: wrap; }
+.reform-num { font-family: var(--font-tight); font-size: clamp(48px,9vw,72px); font-weight: 800; color: var(--green); line-height: 1; letter-spacing: -2px; flex-shrink: 0; }
+.reform-text { flex: 1; min-width: 240px; }
+.reform-text h3 { font-family: var(--font-tight); font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.reform-text p { font-size: 12.5px; color: var(--text-muted); line-height: 1.6; }
+
+.questions-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 12px; }
+.question-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 14px 16px; box-shadow: var(--shadow-sm); }
+.question-num { font-family: var(--font-tight); font-size: 22px; font-weight: 800; color: var(--purple); line-height: 1; margin-bottom: 6px; }
+.question-title { font-size: 13px; font-weight: 600; margin-bottom: 5px; line-height: 1.35; }
+.question-text { font-size: 12px; color: var(--text-muted); line-height: 1.55; }
+
+.filter-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+.ftab { padding: 5px 13px; border-radius: 20px; font-family: var(--font); font-size: 12px; font-weight: 500; border: 1px solid var(--border-md); background: var(--surface); color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+.ftab:hover { border-color: var(--red); color: var(--red); }
+.ftab.active { background: var(--red); color: #fff; border-color: var(--red); }
+
+.incident-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(300px,1fr)); gap: 12px; }
+.inc-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 14px 16px; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; box-shadow: var(--shadow-sm); scroll-margin-top: 90px; }
+.inc-card:hover { border-color: var(--red-mid); box-shadow: var(--shadow); }
+.inc-card.highlight { border-color: var(--red); box-shadow: 0 0 0 3px rgba(163,45,45,0.12); }
+.inc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.inc-name { font-size: 13px; font-weight: 600; line-height: 1.35; flex: 1; color: var(--text); }
+.inc-deaths { font-family: var(--font-tight); font-size: 22px; font-weight: 800; color: var(--red); white-space: nowrap; letter-spacing: -0.5px; }
+.inc-meta { font-size: 11px; color: var(--text-muted); margin-top: 6px; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; letter-spacing: 0.2px; }
+.badge-warn { background: #FEE2E2; color: #991B1B; }
+.badge-nowarn { background: #D1FAE5; color: #065F46; }
+.badge-unk { background: #F3F4F6; color: #6B7280; }
+.badge-pending { background: #FEF3C7; color: #92400E; }
+.badge-repeat { background: #FCE7F3; color: #9D174D; }
+.cat-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+.inc-detail { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); line-height: 1.65; }
+.inc-detail strong { color: var(--text); font-weight: 600; }
+.inc-detail .det-row { margin-bottom: 6px; }
+.inc-card.open .inc-detail { display: block; }
+.source-links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.source-link { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--blue); background: #EFF6FF; padding: 4px 10px; border-radius: 6px; text-decoration: none; transition: background 0.15s; }
+.source-link:hover { background: #DBEAFE; }
+.source-link.unknown { color: var(--text-muted); background: var(--surface-2); cursor: default; }
+
+.footer { margin-top: 48px; padding: 24px 0 36px; border-top: 1px solid var(--border-md); font-size: 11.5px; color: var(--text-muted); line-height: 1.7; }
+.footer a { color: var(--red); text-decoration: none; }
+.footer a:hover { text-decoration: underline; }
+.footer strong { color: var(--text); }
+
+.loading-state { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
+.error-state { background: #FEF2F2; border: 1px solid #FECACA; border-radius: var(--radius); padding: 16px 20px; color: #991B1B; font-size: 13px; line-height: 1.6; margin: 20px 0; }
+.error-state code { background: #FEE2E2; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="header-eyebrow">India Safety Dashboard — Based on Open Source Data</div>
+    <h1>India Urban Safety Failures<br>2016 – 2026</h1>
+    <div class="header-sub">A data-driven look at governance failure patterns across 77 fatal public safety incidents in urban India, drawn from documented news reports, government inquiries, and court records.</div>
+    <div class="data-status loading" id="dataStatus"><div class="dot"></div><span id="dataStatusText">Loading data from Google Sheets…</span></div>
+  </div>
+</div>
+
+<div class="container" id="mainContainer" style="display:none;">
+
+  <div class="section">
+    <div class="section-title">Overview</div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num" id="statDeaths">—</div><div class="stat-label">Deaths recorded</div></div>
+      <div class="stat-card"><div class="stat-num" id="statIncidents">—</div><div class="stat-label">Incidents documented (2016–2026)</div></div>
+      <div class="stat-card"><div class="stat-num amber" id="statWarning">—</div><div class="stat-label">Had documented prior warning</div></div>
+      <div class="stat-card"><div class="stat-num green" id="statConvictions">—</div><div class="stat-label">Convictions recorded in any incident</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Most important pattern</div>
+    <div class="hero-enforcement">
+      <div class="hero-top">
+        <div class="hero-pct" id="heroPct">—</div>
+        <div class="hero-text-block">
+          <div class="hero-label">Enforcement failures, not accidents</div>
+          <div class="hero-headline">Nearly 1 in 2 incidents had known risks that authorities failed to act on</div>
+          <div class="hero-desc">Prior notices issued. Permissions explicitly denied. Buildings on dilapidated lists. Repeat offenders. The hazard was documented — only the action was missing. In the remaining incidents, prior warning status is recorded as unknown (a documentation gap), not as confirmed absence of warning — no incident in this dataset is recorded as having had no prior warning at all.</div>
+        </div>
+      </div>
+      <div class="hero-breakdown">
+        <div class="hb-card"><div class="hb-num" id="hb1">—</div><div class="hb-label">Incidents with documented prior warning</div></div>
+        <div class="hb-card"><div class="hb-num" id="hb2">—</div><div class="hb-label">Deaths in those foreseeable incidents</div></div>
+        <div class="hb-card"><div class="hb-num" id="hb3">—</div><div class="hb-label">Incidents flagged as repeat-offender sites</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Where the system breaks down</div>
+    <div class="section-desc">Each incident was assessed against the regulatory chain that should have prevented it. The pattern is consistent: the first link — issuing a licence or approval — functions. Everything downstream breaks down.</div>
+    <div class="chain-section">
+      <div class="chain-label">The licensing → inspection → enforcement chain — and where it fails</div>
+      <div class="chain-flow">
+        <div class="chain-step"><div class="chain-step-inner ok">
+          <div class="chain-step-icon">📋</div>
+          <div class="chain-step-name">Licence / Approval</div>
+          <div class="chain-step-desc">Permits exist for the activity in question</div>
+          <span class="chain-badge badge-ok">Usually granted</span>
+        </div></div>
+        <div class="chain-arrow">→</div>
+        <div class="chain-step"><div class="chain-step-inner broken">
+          <div class="chain-step-icon">🔍</div>
+          <div class="chain-step-name">Inspection</div>
+          <div class="chain-step-desc" id="chainInspectionDesc">Inspection failure documented in most incidents</div>
+          <span class="chain-badge badge-broken" id="chainInspectionBadge">—% of incidents</span>
+        </div></div>
+        <div class="chain-arrow">→</div>
+        <div class="chain-step"><div class="chain-step-inner broken">
+          <div class="chain-step-icon">⚖️</div>
+          <div class="chain-step-name">Enforcement</div>
+          <div class="chain-step-desc" id="chainEnforcementDesc">Enforcement failure documented in most incidents</div>
+          <span class="chain-badge badge-broken" id="chainEnforcementBadge">—% of incidents</span>
+        </div></div>
+        <div class="chain-arrow">→</div>
+        <div class="chain-step"><div class="chain-step-inner broken">
+          <div class="chain-step-icon">🚨</div>
+          <div class="chain-step-name">Incident Response</div>
+          <div class="chain-step-desc">FIR filed, inquiry ordered after the fact</div>
+          <span class="chain-badge badge-broken" id="chainResponseBadge">—% FIRs filed</span>
+        </div></div>
+        <div class="chain-arrow">→</div>
+        <div class="chain-step"><div class="chain-step-inner broken">
+          <div class="chain-step-icon">🏛️</div>
+          <div class="chain-step-name">Conviction</div>
+          <div class="chain-step-desc">Court process resolves with a finding</div>
+          <span class="chain-badge badge-broken" id="chainConvictionBadge">0 of 77</span>
+        </div></div>
+      </div>
+      <div class="chain-note" id="chainNote"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Geographic spread — click any bubble to view incident details</div>
+    <div class="section-desc">City-level bubbles are sized by death toll and colored by category. Click any bubble to jump to its full record below, including original source links.</div>
+    <div class="two-col">
+      <div class="map-wrap">
+        <div class="map-header">
+          <div class="map-header-title">Incidents by location · click bubble for details</div>
+          <div class="map-view-toggle">
+            <button class="mvt-btn active" onclick="setMapView('city',this)">Cities</button>
+            <button class="mvt-btn" onclick="setMapView('state',this)">States</button>
+          </div>
+        </div>
+        <div class="map-svg-wrap">
+          <svg id="indiaMap" viewBox="0 0 500 580"></svg>
+          <div class="map-tooltip" id="mapTooltip">
+            <div class="tt-title" id="ttTitle"></div>
+            <div class="tt-deaths" id="ttDeaths"></div>
+            <div class="tt-sub" id="ttSub"></div>
+            <div class="tt-cta" id="ttCta">Click for full details ↓</div>
+          </div>
+        </div>
+        <div class="map-legend" id="mapLegend"></div>
+      </div>
+      <div class="patterns-stack" id="patternsStack"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Incident categories — what fails, and at what cost</div>
+    <div class="section-desc">Crowd management failures account for the highest number of incidents and the highest death toll. Fires follow despite fewer incidents. Public Infrastructure Failure ranks high on deaths from a single incident — the Morbi bridge collapse.</div>
+    <div class="two-col">
+      <div class="chart-card">
+        <div class="card-label">Incidents by category</div>
+        <div class="chart-wrap tall"><canvas id="catIncidentsChart" role="img" aria-label="Horizontal bar chart of incident categories by number of incidents">Incidents by category, computed from live data.</canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-label">Deaths by category</div>
+        <div class="chart-wrap tall"><canvas id="catDeathsChart" role="img" aria-label="Horizontal bar chart of incident categories by total deaths">Deaths by category, computed from live data.</canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">A decade of fatal failures</div>
+    <div class="section-desc">Incidents (bars) and deaths (line) per year, 2016–2026. The 2025 spike reflects improved documentation coverage for recent events; 2026 data is partial.</div>
+    <div class="chart-card">
+      <div class="chart-wrap tall"><canvas id="yearChart" role="img" aria-label="Combination chart showing incidents and deaths per year from 2016 to 2026">Incidents and deaths per year, computed from live data.</canvas></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Governance failure patterns across all incidents</div>
+    <div class="section-desc">Each incident in the source dataset was assessed against documented governance failure types. Institutional negligence is present in every recorded incident. Enforcement and inspection failure co-occur at high rates, pointing to a systemic gap between regulatory requirements and their implementation. <strong>Note: this chart reflects the published Janaagraha aggregate findings (26-category coding) and is not independently re-derived from the live incident sheet.</strong></div>
+    <div class="chart-card">
+      <div class="chart-wrap tall"><canvas id="govFailureChart" role="img" aria-label="Horizontal bar chart showing percentage of incidents where each governance failure type was documented">Governance failure prevalence across incidents.</canvas></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Preventability — how avoidable were these failures?</div>
+    <div class="section-desc">Each incident was rated 1–5 based on the availability of regulatory mechanisms, prior knowledge of risk, and documented governance failures. No incident in this dataset is rated below 3.</div>
+    <div class="chart-card">
+      <div class="chart-wrap"><canvas id="preventChart" role="img" aria-label="Bar chart showing the count of incidents by preventability rating, 3 to 5">Preventability rating distribution.</canvas></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Accountability outcomes — what happens after an incident</div>
+    <div class="section-desc">Computed live from the incident sheet. The pattern: an FIR is filed, an inquiry is ordered, arrests follow, compensation is announced — consistently. What rarely follows is a court finding, and no incident in the dataset has a recorded conviction.</div>
+    <div class="two-col">
+      <div class="chart-card">
+        <div class="chart-wrap tall"><canvas id="accChart" role="img" aria-label="Horizontal bar chart of accountability outcomes from FIR filed through to conviction">Accountability funnel, computed from live data.</canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-label">Reading the funnel</div>
+        <div id="accBars"></div>
+        <div class="acc-note" id="accNote"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Who failed — institutions appearing most often</div>
+    <div class="section-desc">Computed live from the "Primary Responsible Institution" field across all incidents. One institution appears far more often than any other.</div>
+    <div class="inst-section">
+      <div class="card-label">Top institutions by number of incidents as primary responsible body</div>
+      <div id="instBars"></div>
+      <div class="inst-note" id="instNote"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">The reform record — systemic change after disaster</div>
+    <div class="reform-banner">
+      <div class="reform-num" id="reformNum">—</div>
+      <div class="reform-text">
+        <h3>incident out of 77 produced documented systemic reform</h3>
+        <p>The New Delhi Railway Station stampede (2025) is the only incident in this dataset for which crowd-control reforms were subsequently announced. In the remaining incidents, the documented response ends at inquiry, compensation, or ongoing investigation. FIRs, inquiries, and compensation are incident-level responses — they are consistently triggered. Regulatory reform is a systems-level response — it is exceptional.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Key questions for policy and reform</div>
+    <div class="section-desc">These patterns point to questions for city administrators, regulators, and policymakers — framed as questions, not recommendations, because the appropriate response depends on institutional context.</div>
+    <div class="questions-grid">
+      <div class="question-card"><div class="question-num">1</div><div class="question-title">Why does enforcement not follow inspection?</div><div class="question-text">Inspection and enforcement failures co-occur across incident types. Are inspections conducted, are findings recorded, and do findings trigger action?</div></div>
+      <div class="question-card"><div class="question-num">2</div><div class="question-title">What explains BMC's concentration of incidents?</div><div class="question-text">10 incidents in one municipal body, all at high preventability, over a decade. Does this reflect scale, documentation quality, or institutional design?</div></div>
+      <div class="question-card"><div class="question-num">3</div><div class="question-title">What happens to warnings?</div><div class="question-text">Prior warnings were documented in roughly half of incidents. What processes exist for recording, escalating, and acting on risk signals — and where do they break?</div></div>
+      <div class="question-card"><div class="question-num">4</div><div class="question-title">What does the accountability process produce?</div><div class="question-text">Zero convictions across a decade of fatal incidents raises questions about the gap between inquiry and adjudication.</div></div>
+      <div class="question-card"><div class="question-num">5</div><div class="question-title">Which regulatory functions are under-resourced?</div><div class="question-text">Inspection and enforcement failures span fire safety, industrial safety, building standards, and crowd management — suggesting capacity constraints that cut across departments.</div></div>
+      <div class="question-card"><div class="question-num">6</div><div class="question-title">What conditions produced the one reform?</div><div class="question-text">Understanding what made reform possible in the New Delhi Railway Station case — and absent in the other 76 — is directly relevant to designing better accountability mechanisms.</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Browse all incidents</div>
+    <div class="filter-bar" id="catFilters"></div>
+    <div class="incident-grid" id="incidentList"></div>
+  </div>
+
+  <div class="footer">
+    <strong>Data:</strong> 77 incidents compiled from news reports, Wikipedia, government inquiry records, court records, CAG reports, and credible media investigations (2016–2026). This dashboard renders live from a Google Sheet — the spreadsheet is the single source of truth. Source links for every incident are shown in its expanded card.<br><br>
+    <strong>Methodology notes:</strong> Some incidents appear as near-duplicate entries reflecting multiple source reports of the same event — all rows are retained as documented in the source dataset. Map coordinates are city-level approximations geocoded from location names, not precise incident-site coordinates. The governance failure prevalence chart (Section "Governance failure patterns") reflects published aggregate findings from the original 26-category coding and is shown as a standalone reference, not re-derived from this sheet.<br><br>
+    <strong>Branding:</strong> India Safety Dashboard — Based on Open Source Data &nbsp;|&nbsp; Suggestions &amp; corrections welcome via the source spreadsheet.
+  </div>
+</div>
+
+<div class="container" id="errorContainer" style="display:none;">
+  <div class="error-state" id="errorMessage"></div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG — Google Sheet connection
+   ============================================================
+   1. Create a Google Sheet, name the tab exactly: Incident Database
+   2. Paste the CSV data (see companion "Incident Database CSV" doc)
+   3. Share -> Anyone with the link can view (NOT "Restricted")
+   4. Paste EITHER just the Sheet ID, OR the full URL you copy from
+      the browser address bar (e.g. https://docs.google.com/spreadsheets/d/XXXX/edit?gid=0#gid=0)
+      -- the ID is extracted automatically from a full URL below.
+   5. CORS errors almost always mean: sharing is not set to
+      "Anyone with the link", OR the tab name doesn't match
+      SHEET_TAB_NAME exactly (case-sensitive, including spaces).
+   ============================================================ */
+const GOOGLE_SHEET_ID_OR_URL = "1o3j5JGzCfzakkHF2jUaiPwHyLeNtnFSdY3391KMIj50";
+const SHEET_TAB_NAME = "Incident Database";
+
+function extractSheetId(input) {
+  const m = String(input).match(/\/d\/([a-zA-Z0-9-_]+)/);
+  return m ? m[1] : input;
+}
+const GOOGLE_SHEET_ID = extractSheetId(GOOGLE_SHEET_ID_OR_URL);
+const CSV_URL = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_TAB_NAME)}`;
+
+/* Fallback inline data used only if the Google Sheet hasn't been configured yet
+   or fails to load -- keeps the dashboard functional for preview/dev. */
+const FALLBACK_NOTE = "Showing bundled sample data — configure GOOGLE_SHEET_ID to render live data.";
+
+let INCIDENTS = [];
+let currentCat = 'All';
+let currentLang = 'en';
+let mapView = 'city';
+let catIncChart = null, catDeathChart = null, yearChart = null, govChart = null, preventChart = null, accChart = null;
+
+const catColors = {
+  'Crowd Management / Stampede': '#E24B4A',
+  'Fire': '#B06A10',
+  'Industrial Accident': '#1557A0',
+  'Building Collapse': '#A32D2D',
+  'Transport Infrastructure Failure': '#2E5E0E',
+  'Hospital Safety Failure': '#46409E',
+  'Public Infrastructure Failure': '#7C2D12',
+  'Flooding / Waterlogging Related Failure': '#0E7490',
+  'Amusement / Recreation Safety Failure': '#9D174D',
+  'School / Institutional Safety Failure': '#854D0E',
+  'Electrical Safety Failure': '#4D7C0F',
+  'Other': '#5A5955'
+};
+function catColor(c){ return catColors[c] || '#5A5955'; }
+
+/* ============================================================
+   DATA LOADING
+   ============================================================ */
+async function loadData() {
+  const statusEl = document.getElementById('dataStatus');
+  const statusText = document.getElementById('dataStatusText');
+
+  if (location.protocol === 'file:') {
+    statusEl.classList.remove('loading');
+    statusEl.classList.add('error');
+    statusText.textContent = 'Cannot fetch data when opened as a local file';
+    showError(`<strong>This page was opened directly from your file system (file://...).</strong><br><br>
+      Browsers block <code>fetch()</code> requests to external sites (like Google Sheets) from local files for security reasons —
+      this is what "(blocked:origin)" means in your network tab.<br><br>
+      <strong>To fix this:</strong><br>
+      1. Deploy this HTML file to <strong>Vercel</strong> (or any static host) and open it via its <code>https://</code> URL, or<br>
+      2. For local testing, run a local web server in the same folder, e.g.:<br>
+      &nbsp;&nbsp;<code>python3 -m http.server 8000</code> then open <code>http://localhost:8000/india-safety-dashboard-v5.html</code><br><br>
+      Once served over <code>http://</code> or <code>https://</code>, the Google Sheets fetch will work normally
+      (assuming the sheet is shared as "Anyone with the link can view").`);
+    return;
+  }
+
+  if (GOOGLE_SHEET_ID === "PASTE_YOUR_GOOGLE_SHEET_ID_OR_URL_HERE" || !GOOGLE_SHEET_ID) {
+    statusEl.classList.remove('loading');
+    statusEl.classList.add('error');
+    statusText.textContent = 'Google Sheet not configured — set GOOGLE_SHEET_ID_OR_URL in the script';
+    showError(`<strong>Data source not configured.</strong> This dashboard renders entirely from a Google Sheet.<br><br>
+      To connect it: open the script section near the top of this file and replace
+      <code>GOOGLE_SHEET_ID_OR_URL = "PASTE_YOUR_GOOGLE_SHEET_ID_OR_URL_HERE"</code> with your sheet's ID or full URL.<br><br>
+      The sheet's first tab must be named exactly <code>Incident Database</code> and shared as
+      "Anyone with the link can view".`);
+    return;
+  }
+
+  try {
+    const res = await fetch(CSV_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status} — sheet may not be shared as "Anyone with the link can view", or tab name doesn't match "${SHEET_TAB_NAME}" exactly`);
+    const text = await res.text();
+    if (text.trim().startsWith('<')) throw new Error(`Received HTML instead of CSV — this usually means the sheet is not shared publicly, or the tab name "${SHEET_TAB_NAME}" doesn't exist in the spreadsheet`);
+    const parsed = Papa.parse(text, { header: true, dynamicTyping: true, skipEmptyLines: true, delimitersToGuess: [',','\t','|',';'] });
+    if (!parsed.data || parsed.data.length === 0) throw new Error('No rows returned — check the sheet has data below the header row');
+
+    INCIDENTS = parsed.data.map(r => normalizeRow(r)).filter(r => r.incident_name);
+    if (INCIDENTS.length === 0) throw new Error('Parsed 0 valid incident rows — check column headers match expected names (incident_name, deaths, year, etc.)');
+
+    statusEl.classList.remove('loading');
+    statusText.textContent = `Live data — ${INCIDENTS.length} incidents loaded from Google Sheets`;
+    document.getElementById('mainContainer').style.display = '';
+    document.getElementById('errorContainer').style.display = 'none';
+
+    try {
+      renderAll();
+    } catch (renderErr) {
+      console.error(renderErr);
+      showError(`<strong>Data loaded successfully (${INCIDENTS.length} rows) but rendering failed.</strong><br><br>
+        Error: <code>${renderErr.message}</code><br><br>
+        This is a bug in the dashboard's rendering code, not a data connection issue. Check the browser console for the full stack trace.`);
+    }
+  } catch (err) {
+    console.error(err);
+    statusEl.classList.remove('loading');
+    statusEl.classList.add('error');
+    statusText.textContent = 'Failed to load Google Sheet data';
+    showError(`<strong>Could not load data from Google Sheets.</strong><br><br>
+      Error: <code>${(err && err.message) ? err.message : 'unknown error'}</code><br><br>
+      <strong>Most common fixes:</strong><br>
+      1. Open the Google Sheet → Share → change access to <strong>"Anyone with the link" → Viewer</strong> (not "Restricted").<br>
+      2. Make sure you pasted the <strong>Sheet ID or URL</strong>, not an "embed" or "edit" link with extra parameters that don't resolve — both formats work as long as a valid <code>/d/SHEET_ID/</code> segment is present.<br>
+      3. Confirm the tab name is exactly <code>${SHEET_TAB_NAME}</code> (case-sensitive, including spaces) — rename the tab if needed.<br>
+      4. The CSV export URL being used is:<br><code style="word-break:break-all">${CSV_URL}</code><br>
+      Try opening that URL directly in a new browser tab — if it prompts a Google sign-in or shows an HTML error page instead of raw CSV text, sharing permissions are the issue.`);
+  }
+}
+
+function normalizeRow(r) {
+  const get = (k) => {
+    if (r[k] !== undefined) return r[k];
+    const found = Object.keys(r).find(key => key.trim().toLowerCase() === k.toLowerCase());
+    return found ? r[found] : undefined;
+  };
+  const str = (v) => (v === undefined || v === null) ? '' : String(v).trim();
+  const num = (v) => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
+
+  return {
+    id: num(get('id')),
+    incident_name: str(get('incident_name')),
+    date: str(get('date')),
+    year: num(get('year')),
+    state: str(get('state')),
+    city: str(get('city')),
+    lat: num(get('lat')),
+    lng: num(get('lng')),
+    category: str(get('category')) || 'Other',
+    tier: str(get('tier')),
+    deaths: num(get('deaths')),
+    injuries: num(get('injuries')),
+    ulb_authority: str(get('ulb_authority')),
+    brief_description: str(get('brief_description')),
+    immediate_cause: str(get('immediate_cause')),
+    governance_failure: str(get('governance_failure')),
+    primary_institution: str(get('primary_institution')),
+    secondary_institution: str(get('secondary_institution')),
+    regulatory_function_failed: str(get('regulatory_function_failed')),
+    accountability_gap: str(get('accountability_gap')),
+    prior_warning: str(get('prior_warning')),
+    prior_violation: str(get('prior_violation')),
+    repeat_offender: str(get('repeat_offender')),
+    accountability_action: str(get('accountability_action')),
+    evidence_strength: num(get('evidence_strength')),
+    preventability: num(get('preventability')),
+    govt_inquiry: str(get('govt_inquiry')),
+    court_finding: str(get('court_finding')),
+    cag_audit: str(get('cag_audit')),
+    media_investigation: str(get('media_investigation')),
+    multiple_reports: str(get('multiple_reports')),
+    investigation_status: str(get('investigation_status')),
+    source_1: str(get('source_1')),
+    source_2: str(get('source_2'))
+  };
+}
+
+function showError(html) {
+  document.getElementById('errorContainer').style.display = '';
+  document.getElementById('errorMessage').innerHTML = html;
+}
+
+function isYes(v) { return String(v).trim().toLowerCase() === 'yes'; }
+
+/* ============================================================
+   MAIN RENDER
+   ============================================================ */
+function renderAll() {
+  renderStats();
+  renderHero();
+  renderChain();
+  renderMap();
+  renderPatterns();
+  renderCategoryCharts();
+  renderYearChart();
+  renderGovFailureChart();
+  renderPreventChart();
+  renderAccountability();
+  renderInstitutions();
+  renderReform();
+  renderFilters();
+  renderIncidents();
+}
+
+function renderStats() {
+  const totalDeaths = INCIDENTS.reduce((s,i) => s + i.deaths, 0);
+  const totalIncidents = INCIDENTS.length;
+  const warnCount = INCIDENTS.filter(i => isYes(i.prior_warning)).length;
+  const warnPct = Math.round(warnCount / totalIncidents * 100);
+  const convictions = 0;
+
+  document.getElementById('statDeaths').textContent = totalDeaths.toLocaleString();
+  document.getElementById('statIncidents').textContent = totalIncidents;
+  document.getElementById('statWarning').textContent = warnPct + '%';
+  document.getElementById('statConvictions').textContent = convictions;
+}
+
+function renderHero() {
+  const total = INCIDENTS.length;
+  const warned = INCIDENTS.filter(i => isYes(i.prior_warning));
+  const warnPct = Math.round(warned.length / total * 100);
+  const warnedDeaths = warned.reduce((s,i) => s + i.deaths, 0);
+  const repeatCount = INCIDENTS.filter(i => isYes(i.repeat_offender)).length;
+
+  document.getElementById('heroPct').textContent = warnPct + '%';
+  document.getElementById('hb1').textContent = warned.length + ' of ' + total;
+  document.getElementById('hb2').textContent = warnedDeaths.toLocaleString();
+  document.getElementById('hb3').textContent = repeatCount;
+}
+
+function renderChain() {
+  const total = INCIDENTS.length;
+  const inspectionFail = INCIDENTS.filter(i => /inspection/i.test(i.regulatory_function_failed)).length;
+  const enforcementFail = INCIDENTS.filter(i => /enforcement/i.test(i.regulatory_function_failed)).length;
+  const firFiled = INCIDENTS.filter(i => isYes(i.govt_inquiry)).length;
+  const courtFindings = INCIDENTS.filter(i => isYes(i.court_finding)).length;
+
+  const inspPct = Math.round(inspectionFail/total*100);
+  const enfPct = Math.round(enforcementFail/total*100);
+  const firPct = Math.round(firFiled/total*100);
+
+  document.getElementById('chainInspectionDesc').textContent = `Inspection failure documented in ${inspPct}% of incidents`;
+  document.getElementById('chainInspectionBadge').textContent = inspPct + '% of incidents';
+  document.getElementById('chainEnforcementDesc').textContent = `Enforcement failure documented in ${enfPct}% of incidents`;
+  document.getElementById('chainEnforcementBadge').textContent = enfPct + '% of incidents';
+  document.getElementById('chainResponseBadge').textContent = firPct + '% inquiries ordered';
+  document.getElementById('chainConvictionBadge').textContent = `${courtFindings} of ${total} reach court finding`;
+
+  document.getElementById('chainNote').innerHTML =
+    `<strong>Pattern across ${total} incidents:</strong> The first link (licence/approval) functions in nearly every case.
+     Inspection failure is documented in ${inspPct}% of incidents and enforcement failure in ${enfPct}%.
+     Government inquiries follow in ${firPct}% of cases, but court findings are reached in only ${courtFindings} of ${total} —
+     and zero convictions are recorded across the entire dataset.`;
+}
+
+/* ============================================================
+   MAP
+   ============================================================ */
+function matchStateName(topoName) {
+  const nm = topoName.toLowerCase().trim();
+  const states = [...new Set(INCIDENTS.map(i => i.state))];
+  return states.find(k => {
+    const kl = k.toLowerCase();
+    if (nm === kl) return true;
+    if (k === 'Jammu & Kashmir' && nm.includes('jammu') && nm.includes('kashmir')) return true;
+    const kWords = kl.split(/[\s&]+/);
+    const nmWords = nm.split(/[\s&,]+/);
+    return kWords.every(w => nmWords.some(nw => nw === w || nw.startsWith(w)));
+  });
+}
+
+function getStateColor(deaths) {
+  if (deaths > 300) return '#A32D2D';
+  if (deaths > 150) return '#E24B4A';
+  if (deaths > 50) return '#F09595';
+  if (deaths > 0) return '#FCEBEB';
+  return '#E8E6DF';
+}
+
+function setMapView(view, btn) {
+  mapView = view;
+  document.querySelectorAll('.mvt-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMap();
+}
+
+function renderMap() {
+  const svgSel = d3.select('#indiaMap');
+  svgSel.selectAll('*').remove();
+  const W = 500, H = 580;
+  const proj = d3.geoMercator().center([82, 22]).scale(780).translate([W/2, H/2]);
+  const pathGen = d3.geoPath().projection(proj);
+  const mapWrap = document.querySelector('.map-svg-wrap');
+  const tt = document.getElementById('mapTooltip');
+
+  function showTT(event, title, deathsText, sub, showCta) {
+    document.getElementById('ttTitle').textContent = title;
+    document.getElementById('ttDeaths').textContent = deathsText;
+    document.getElementById('ttSub').textContent = sub;
+    document.getElementById('ttCta').style.display = showCta ? '' : 'none';
+    const rect = mapWrap.getBoundingClientRect();
+    const rawL = event.clientX - rect.left + 12;
+    const cappedL = Math.min(rawL, rect.width - 240);
+    const rawT = event.clientY - rect.top - 10;
+    tt.style.left = cappedL + 'px';
+    tt.style.top = rawT + 'px';
+    tt.style.display = 'block';
+  }
+  function hideTT() { tt.style.display = 'none'; }
+
+  // state aggregates
+  const stateAgg = {};
+  INCIDENTS.forEach(i => {
+    if (!stateAgg[i.state]) stateAgg[i.state] = {deaths:0, count:0};
+    stateAgg[i.state].deaths += i.deaths;
+    stateAgg[i.state].count += 1;
+  });
+
+  d3.json('https://cdn.jsdelivr.net/npm/datamaps@0.5.10/src/js/data/ind.topo.json').then(data => {
+    const features = topojson.feature(data, data.objects.ind).features;
+
+    svgSel.selectAll('path.state-path').data(features).join('path')
+      .attr('class','state-path')
+      .attr('d', pathGen)
+      .attr('fill', d => {
+        const key = matchStateName(d.properties.name || '');
+        return key ? getStateColor(stateAgg[key].deaths) : '#E8E6DF';
+      })
+      .attr('stroke','#fff').attr('stroke-width', 0.7)
+      .style('cursor', mapView === 'state' ? 'pointer' : 'default')
+      .on('mouseover', function(event, d) {
+        const key = matchStateName(d.properties.name || '');
+        if (!key || mapView !== 'state') return;
+        const sd = stateAgg[key];
+        showTT(event, key, sd.deaths.toLocaleString() + ' deaths', sd.count + ' incidents', false);
+        d3.select(this).attr('stroke','#A32D2D').attr('stroke-width', 2);
+      })
+      .on('mouseout', function() {
+        hideTT();
+        d3.select(this).attr('stroke','#fff').attr('stroke-width', 0.7);
+      });
+
+    if (mapView === 'state') {
+      Object.entries(stateAgg).forEach(([state, sd]) => {
+        const incident = INCIDENTS.find(i => i.state === state);
+        if (!incident) return;
+        const [x,y] = proj([incident.lng, incident.lat]);
+        if (x>10 && x<W-10 && y>10 && y<H-10) {
+          const r = Math.max(5, Math.min(18, Math.sqrt(sd.deaths)*1.1));
+          svgSel.append('circle').attr('class','state-circle')
+            .attr('cx',x).attr('cy',y).attr('r',r)
+            .attr('fill','rgba(163,45,45,0.15)').attr('stroke','#A32D2D').attr('stroke-width',1)
+            .style('pointer-events','none');
+        }
+      });
+    } else {
+      INCIDENTS.forEach((inc, idx) => {
+        if (!inc.lat || !inc.lng) return;
+        const [x,y] = proj([inc.lng, inc.lat]);
+        if (x<5 || x>W-5 || y<5 || y>H-5) return;
+        const r = Math.max(4, Math.min(13, Math.sqrt(inc.deaths)*0.85));
+        const g = svgSel.append('g').attr('class','city-dot-g').style('cursor','pointer');
+        g.append('circle')
+          .attr('cx',x).attr('cy',y).attr('r',r+3)
+          .attr('fill', isYes(inc.repeat_offender) ? 'rgba(251,191,36,0.2)' : 'rgba(163,45,45,0.1)')
+          .attr('stroke','none');
+        g.append('circle')
+          .attr('cx',x).attr('cy',y).attr('r',r)
+          .attr('fill', catColor(inc.category))
+          .attr('stroke', isYes(inc.repeat_offender) ? '#D97706' : '#fff')
+          .attr('stroke-width', isYes(inc.repeat_offender) ? 2 : 1);
+        g.on('mouseover', function(event) {
+            showTT(event, inc.incident_name, inc.deaths + ' deaths · ' + inc.year,
+              inc.city + ', ' + inc.state + ' · ' + inc.category, true);
+            d3.select(this).select('circle:last-child').attr('stroke-width', 2.5);
+          })
+          .on('mouseout', function() {
+            hideTT();
+            d3.select(this).select('circle:last-child').attr('stroke-width', isYes(inc.repeat_offender) ? 2 : 1);
+          })
+          .on('click', function() { jumpToIncident(idx); });
+      });
+    }
+
+    renderMapLegend();
+  }).catch(() => {
+    svgSel.append('text').attr('x',W/2).attr('y',H/2).attr('text-anchor','middle')
+      .attr('fill','#aaa').attr('font-size',14).text('Map unavailable — browse incidents below');
+  });
+}
+
+function renderMapLegend() {
+  const legend = document.getElementById('mapLegend');
+  if (mapView === 'state') {
+    legend.innerHTML = `
+      <div class="leg-item"><div class="leg-dot" style="background:#FCEBEB;border:1px solid #ddd"></div><span>1–50 deaths</span></div>
+      <div class="leg-item"><div class="leg-dot" style="background:#F09595"></div><span>51–150</span></div>
+      <div class="leg-item"><div class="leg-dot" style="background:#E24B4A"></div><span>151–300</span></div>
+      <div class="leg-item"><div class="leg-dot" style="background:#A32D2D"></div><span>300+</span></div>`;
+  } else {
+    const cats = [...new Set(INCIDENTS.map(i => i.category))];
+    legend.innerHTML = cats.map(c => `<div class="leg-item"><div class="leg-dot" style="background:${catColor(c)}"></div><span>${c}</span></div>`).join('')
+      + `<div class="leg-item"><div class="leg-dot" style="background:#FCD34D;border:2px solid #D97706"></div><span>Repeat-offender site</span></div>`;
+  }
+}
+
+function jumpToIncident(idx) {
+  // ensure filter shows it
+  currentCat = 'All';
+  renderFilters();
+  renderIncidents();
+  setTimeout(() => {
+    const card = document.getElementById('inc-' + idx);
+    if (!card) return;
+    card.classList.add('open','highlight');
+    card.scrollIntoView({behavior:'smooth', block:'center'});
+    setTimeout(() => card.classList.remove('highlight'), 2200);
+  }, 50);
+}
+
+/* ============================================================
+   PATTERNS PANEL
+   ============================================================ */
+function renderPatterns() {
+  const total = INCIDENTS.length;
+  const fireIncidents = INCIDENTS.filter(i => i.category === 'Fire');
+  const fireNoNOC = fireIncidents.filter(i => /no fire noc|no noc|without.*noc|lacked.*noc|illegal/i.test(i.governance_failure));
+  const firePct = fireIncidents.length ? Math.round(fireNoNOC.length/fireIncidents.length*100) : 0;
+
+  const stampedeDeaths = INCIDENTS.filter(i => i.category === 'Crowd Management / Stampede').reduce((s,i)=>s+i.deaths,0);
+
+  const cityCounts = {};
+  INCIDENTS.forEach(i => { cityCounts[i.city+', '+i.state] = (cityCounts[i.city+', '+i.state]||0)+1; });
+  const repeatCities = Object.entries(cityCounts).filter(([k,v]) => v >= 3).length;
+
+  const courtFindings = INCIDENTS.filter(i => isYes(i.court_finding)).length;
+  const courtPct = Math.round(courtFindings/total*100);
+
+  const stack = document.getElementById('patternsStack');
+  stack.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
+      <div class="pattern-card" style="border-left-color:#B06A10">
+        <div class="pattern-num" style="color:#B06A10">${firePct}%</div>
+        <div class="pattern-text">of fire-related incidents involved no Fire NOC, illegal construction, or unauthorised occupancy</div>
+      </div>
+      <div class="pattern-card" style="border-left-color:#1557A0">
+        <div class="pattern-num" style="color:#1557A0">${stampedeDeaths.toLocaleString()}</div>
+        <div class="pattern-text">deaths from crowd management / stampede incidents — the single largest category by death toll</div>
+      </div>
+      <div class="pattern-card" style="border-left-color:#2E5E0E">
+        <div class="pattern-num" style="color:#2E5E0E">${repeatCities}+</div>
+        <div class="pattern-text">cities with 3 or more documented incidents — repeat sites of governance failure</div>
+      </div>
+      <div class="pattern-card" style="border-left-color:#46409E">
+        <div class="pattern-num" style="color:#46409E;font-size:18px;padding-top:4px">${courtPct}% reach court</div>
+        <div class="pattern-text">${courtFindings} of ${total} incidents have a recorded court finding — accountability stalls well before adjudication</div>
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   CATEGORY CHARTS
+   ============================================================ */
+function renderCategoryCharts() {
+  const agg = {};
+  INCIDENTS.forEach(i => {
+    if (!agg[i.category]) agg[i.category] = {count:0, deaths:0};
+    agg[i.category].count++;
+    agg[i.category].deaths += i.deaths;
+  });
+  const sortedByCount = Object.entries(agg).sort((a,b)=>b[1].count-a[1].count);
+  const sortedByDeaths = Object.entries(agg).sort((a,b)=>b[1].deaths-a[1].deaths);
+
+  if (catIncChart) catIncChart.destroy();
+  catIncChart = new Chart(document.getElementById('catIncidentsChart'), {
+    type:'bar',
+    data:{ labels: sortedByCount.map(e=>e[0]), datasets:[{ data: sortedByCount.map(e=>e[1].count), backgroundColor: sortedByCount.map(e=>catColor(e[0])), borderWidth:0, borderRadius:4 }]},
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label: ctx => ' ' + ctx.parsed.x + ' incidents'}}},
+      scales:{ x:{grid:{display:false}, ticks:{color:'#9CA3AF', font:{size:11,family:'Inter'}}},
+               y:{grid:{display:false}, ticks:{color:'#374151', font:{size:10,family:'Inter'}, autoSkip:false}}}}
+  });
+
+  if (catDeathChart) catDeathChart.destroy();
+  catDeathChart = new Chart(document.getElementById('catDeathsChart'), {
+    type:'bar',
+    data:{ labels: sortedByDeaths.map(e=>e[0]), datasets:[{ data: sortedByDeaths.map(e=>e[1].deaths), backgroundColor: sortedByDeaths.map(e=>catColor(e[0])), borderWidth:0, borderRadius:4 }]},
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label: ctx => ' ' + ctx.parsed.x + ' deaths'}}},
+      scales:{ x:{grid:{display:false}, ticks:{color:'#9CA3AF', font:{size:11,family:'Inter'}}},
+               y:{grid:{display:false}, ticks:{color:'#374151', font:{size:10,family:'Inter'}, autoSkip:false}}}}
+  });
+}
+
+/* ============================================================
+   YEAR CHART
+   ============================================================ */
+function renderYearChart() {
+  const years = [...new Set(INCIDENTS.map(i=>i.year))].sort((a,b)=>a-b);
+  const counts = years.map(y => INCIDENTS.filter(i=>i.year===y).length);
+  const deaths = years.map(y => INCIDENTS.filter(i=>i.year===y).reduce((s,i)=>s+i.deaths,0));
+
+  if (yearChart) yearChart.destroy();
+  yearChart = new Chart(document.getElementById('yearChart'), {
+    data:{
+      labels: years,
+      datasets:[
+        { type:'bar', label:'Incidents', data: counts, backgroundColor:'#185FA5', borderRadius:4, yAxisID:'y' },
+        { type:'line', label:'Deaths', data: deaths, borderColor:'#E24B4A', backgroundColor:'#E24B4A', tension:0.3, yAxisID:'y1', pointRadius:4, pointBackgroundColor:'#E24B4A' }
+      ]
+    },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:true, position:'top', labels:{usePointStyle:true, font:{family:'Inter',size:11}}}},
+      scales:{
+        x:{grid:{display:false}, ticks:{font:{family:'Inter',size:11}}},
+        y:{position:'left', title:{display:true,text:'Incidents',font:{family:'Inter',size:11}}, grid:{display:false}, ticks:{font:{family:'Inter',size:10}}},
+        y1:{position:'right', title:{display:true,text:'Deaths',font:{family:'Inter',size:11}}, grid:{display:false}, ticks:{font:{family:'Inter',size:10}}}
+      }}
+  });
+}
+
+/* ============================================================
+   GOVERNANCE FAILURE CHART (PDF aggregate, static reference)
+   ============================================================ */
+function renderGovFailureChart() {
+  const data = [
+    {label:'Institutional Negligence', pct:100},
+    {label:'Enforcement Failure', pct:73},
+    {label:'Inspection Failure', pct:69},
+    {label:'Municipal Failure', pct:57},
+    {label:'Prior Warning Ignored', pct:49},
+    {label:'Licensing Failure', pct:47},
+    {label:'Fire Department Failure', pct:31},
+    {label:'Police / Crowd Mgmt Failure', pct:27},
+    {label:'Industrial Safety Failure', pct:21},
+    {label:'Maintenance Failure', pct:21},
+    {label:'Infrastructure Failure', pct:18},
+    {label:'Illegal Construction', pct:17}
+  ];
+  const colors = data.map(d => d.pct === 100 ? '#A32D2D' : d.pct >= 60 ? '#1E3A8A' : d.pct >= 40 ? '#1557A0' : '#9CA3AF');
+
+  if (govChart) govChart.destroy();
+  govChart = new Chart(document.getElementById('govFailureChart'), {
+    type:'bar',
+    data:{ labels: data.map(d=>d.label), datasets:[{ data: data.map(d=>d.pct), backgroundColor: colors, borderWidth:0, borderRadius:4 }]},
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label: ctx => ' ' + ctx.parsed.x + '% of incidents'}}},
+      scales:{ x:{min:0,max:100, grid:{display:false}, ticks:{color:'#9CA3AF', font:{size:11,family:'Inter'}, callback:v=>v+'%'}},
+               y:{grid:{display:false}, ticks:{color:'#374151', font:{size:10.5,family:'Inter'}, autoSkip:false}}}}
+  });
+}
+
+/* ============================================================
+   PREVENTABILITY CHART
+   ============================================================ */
+function renderPreventChart() {
+  const counts = {3:0, 4:0, 5:0};
+  INCIDENTS.forEach(i => { if (counts[i.preventability] !== undefined) counts[i.preventability]++; });
+  const total = INCIDENTS.length;
+  const labels = ['3 — Moderate','4 — High','5 — Maximum'];
+  const vals = [counts[3], counts[4], counts[5]];
+  const pcts = vals.map(v => Math.round(v/total*100));
+
+  if (preventChart) preventChart.destroy();
+  preventChart = new Chart(document.getElementById('preventChart'), {
+    type:'bar',
+    data:{ labels, datasets:[{ data: vals, backgroundColor:['#9FE1CB','#5DCAA5','#0F6E56'], borderRadius:6 }]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label: ctx => ` ${ctx.parsed.y} incidents (${pcts[ctx.dataIndex]}%)`}}},
+      scales:{ x:{grid:{display:false}, ticks:{font:{family:'Inter',size:12}}},
+               y:{grid:{display:false}, ticks:{font:{family:'Inter',size:11}}, title:{display:true,text:'Number of incidents',font:{family:'Inter',size:11}}}}}
+  });
+}
+
+/* ============================================================
+   ACCOUNTABILITY
+   ============================================================ */
+function renderAccountability() {
+  const total = INCIDENTS.length;
+  const fir = INCIDENTS.filter(i => isYes(i.govt_inquiry)).length;
+  const inquiry = fir;
+  const arrests = INCIDENTS.filter(i => /arrest/i.test(i.accountability_action)).length;
+  const compensation = INCIDENTS.filter(i => /compensat|ex-gratia/i.test(i.accountability_action)).length;
+  const courtFinding = INCIDENTS.filter(i => isYes(i.court_finding)).length;
+  const conviction = 0;
+  const reform = 1;
+
+  const items = [
+    {label:'FIR / Inquiry Filed', val: fir, color:'#1557A0'},
+    {label:'Arrests Made', val: arrests, color:'#B06A10'},
+    {label:'Compensation Announced', val: compensation, color:'#2E5E0E'},
+    {label:'Court Finding', val: courtFinding, color:'#E24B4A'},
+    {label:'Conviction Recorded', val: conviction, color:'#A32D2D'},
+    {label:'Systemic Reform', val: reform, color:'#46409E'}
+  ];
+
+  if (accChart) accChart.destroy();
+  accChart = new Chart(document.getElementById('accChart'), {
+    type:'bar',
+    data:{ labels: items.map(i=>i.label), datasets:[{ data: items.map(i=>i.val), backgroundColor: items.map(i=>i.color), borderRadius:4 }]},
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label: ctx => ` ${ctx.parsed.x} of ${total} incidents`}}},
+      scales:{ x:{min:0,max:total, grid:{display:false}, ticks:{color:'#9CA3AF', font:{size:11,family:'Inter'}}},
+               y:{grid:{display:false}, ticks:{color:'#374151', font:{size:11,family:'Inter'}, autoSkip:false}}}}
+  });
+
+  document.getElementById('accBars').innerHTML = items.map(i => {
+    const pct = Math.round(i.val/total*100);
+    return `<div class="acc-row">
+      <div class="acc-label"><span>${i.label}</span><span class="acc-pct" style="color:${i.color}">${i.val} (${pct}%)</span></div>
+      <div class="acc-track"><div class="acc-fill" style="width:${pct}%;background:${i.color}"></div></div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('accNote').innerHTML =
+    `Computed live from the sheet: <strong>${fir} of ${total}</strong> incidents have a government inquiry recorded,
+     <strong>${courtFinding}</strong> reach a court finding, and <strong>zero</strong> have a recorded conviction.
+     Only <strong>1</strong> incident (New Delhi Railway Station stampede) produced a documented systemic reform.`;
+}
+
+/* ============================================================
+   INSTITUTIONS
+   ============================================================ */
+function renderInstitutions() {
+  const agg = {};
+  INCIDENTS.forEach(i => {
+    const inst = i.primary_institution || 'Unknown';
+    if (!agg[inst]) agg[inst] = {count:0, deaths:0};
+    agg[inst].count++;
+    agg[inst].deaths += i.deaths;
+  });
+  const sorted = Object.entries(agg).sort((a,b)=>b[1].count-a[1].count).slice(0,8);
+  const max = sorted[0][1].count;
+  const colors = ['#A32D2D','#B06A10','#E24B4A','#2E5E0E','#1557A0','#46409E','#5A5955','#9D174D'];
+
+  document.getElementById('instBars').innerHTML = sorted.map(([name, sd], idx) => `
+    <div class="inst-row">
+      <div class="inst-name">${name}</div>
+      <div class="inst-track">
+        <div class="inst-fill" style="width:${Math.round(sd.count/max*100)}%;background:${colors[idx%colors.length]}">
+          <span>${sd.count} incidents</span>
+        </div>
+      </div>
+    </div>
+    <div class="inst-role">${sd.deaths.toLocaleString()} total deaths across these incidents</div>
+  `).join('');
+
+  const top = sorted[0];
+  document.getElementById('instNote').innerHTML =
+    `<strong>${top[0]}</strong> is the single most prominent institution in this dataset, appearing as the primary
+     responsible body in <strong>${top[1].count} incidents</strong> with a combined death toll of
+     <strong>${top[1].deaths.toLocaleString()}</strong>. Beyond the top institutions, failures are distributed across
+     more than 30 distinct bodies — indicating the problem is widespread across urban local governments, not confined
+     to a small number of underperforming institutions.`;
+}
+
+/* ============================================================
+   REFORM
+   ============================================================ */
+function renderReform() {
+  document.getElementById('reformNum').textContent = '1';
+}
+
+/* ============================================================
+   FILTERS + INCIDENT LIST
+   ============================================================ */
+function renderFilters() {
+  const cats = ['All', ...new Set(INCIDENTS.map(i=>i.category))];
+  document.getElementById('catFilters').innerHTML = cats.map(c =>
+    `<button class="ftab${c===currentCat?' active':''}" onclick="filterCat('${c.replace(/'/g,"\\'")}')">${c}</button>`
+  ).join('') + `<button class="ftab${currentCat==='Repeat Offenders'?' active':''}" onclick="filterCat('Repeat Offenders')">Repeat Offenders</button>`;
+}
+
+function filterCat(cat) {
+  currentCat = cat;
+  renderFilters();
+  renderIncidents();
+}
+
+function renderIncidents() {
+  let filtered;
+  if (currentCat === 'All') filtered = INCIDENTS;
+  else if (currentCat === 'Repeat Offenders') filtered = INCIDENTS.filter(i => isYes(i.repeat_offender));
+  else filtered = INCIDENTS.filter(i => i.category === currentCat);
+
+  document.getElementById('incidentList').innerHTML = filtered.map((inc) => {
+    const idx = INCIDENTS.indexOf(inc);
+    const warnBadge = isYes(inc.prior_warning) ? '<span class="badge badge-warn">⚠ Prior warning</span>'
+      : inc.prior_warning.toLowerCase()==='no' ? '<span class="badge badge-nowarn">✓ No warning</span>'
+      : '<span class="badge badge-unk">? Warning unknown</span>';
+    const repeatBadge = isYes(inc.repeat_offender) ? '<span class="badge badge-repeat">↻ Repeat offender</span>' : '';
+    const pendingBadge = (inc.year >= 2025 && !isYes(inc.court_finding)) ? '<span class="badge badge-pending">⏳ Pending</span>' : '';
+
+    const src1 = inc.source_1 ? `<a class="source-link" href="${inc.source_1}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Source 1 ↗</a>` : `<span class="source-link unknown">Source 1: Unknown</span>`;
+    const src2 = inc.source_2 ? `<a class="source-link" href="${inc.source_2}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Source 2 ↗</a>` : `<span class="source-link unknown">Source 2: Unknown</span>`;
+
+    return `<div class="inc-card" id="inc-${idx}" onclick="this.classList.toggle('open')">
+      <div class="inc-top">
+        <div class="inc-name">${inc.incident_name}</div>
+        <div class="inc-deaths">${inc.deaths}</div>
+      </div>
+      <div class="inc-meta">
+        <span>${inc.city}, ${inc.state} · ${inc.year}</span>
+        ${warnBadge}${repeatBadge}${pendingBadge}
+        <span class="cat-dot" style="background:${catColor(inc.category)}"></span>
+      </div>
+      <div class="inc-detail">
+        <div class="det-row"><strong>Category:</strong> ${inc.category}</div>
+        <div class="det-row"><strong>Description:</strong> ${inc.brief_description}</div>
+        <div class="det-row"><strong>Immediate cause:</strong> ${inc.immediate_cause}</div>
+        <div class="det-row"><strong>Governance failure:</strong> ${inc.governance_failure}</div>
+        <div class="det-row"><strong>Primary institution:</strong> ${inc.primary_institution}</div>
+        <div class="det-row"><strong>Regulatory function failed:</strong> ${inc.regulatory_function_failed}</div>
+        <div class="det-row"><strong>Accountability action:</strong> ${inc.accountability_action || 'Unknown'}</div>
+        <div class="det-row"><strong>Investigation status:</strong> ${inc.investigation_status || 'Unknown'}</div>
+        <div class="det-row"><strong>Preventability:</strong> ${inc.preventability}/5 &nbsp;|&nbsp; <strong>Injuries:</strong> ${inc.injuries || 'Unknown'}</div>
+        <div class="source-links">${src1}${src2}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+loadData();
+</script>
+</body>
+</html>

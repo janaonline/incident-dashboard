@@ -1,0 +1,558 @@
+:root {
+  --black: #0a0a0a;
+  --charcoal: #161616;
+  --charcoal-light: #1f1f1f;
+  --yellow: #f5c400;
+  --cream: #f3efe6;
+
+  --font-display: "Playfair Display", serif;
+  --font-body: "Inter", sans-serif;
+
+  /* Default glass tint (neutral charcoal) until script.js extracts a
+     per-image color via extractTint() and overrides these on each panel. */
+  --tint-r: 22;
+  --tint-g: 22;
+  --tint-b: 22;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-color: var(--yellow) var(--black);
+  scrollbar-width: thin;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--black);
+  color: var(--cream);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--black);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--yellow);
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: var(--yellow);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Scroll progress ---------- */
+
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0%;
+  background: var(--yellow);
+  z-index: 100;
+  transition: width 0.1s linear;
+}
+
+/* ---------- Shared: full-bleed media + parallax inner ---------- */
+
+.hero__media {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--charcoal);
+}
+
+/* ---------- Image stack: one shared fixed layer behind all sections,
+   each .image-layer cross-fades in/out as its section scrolls through,
+   driven continuously by startScrollEngine() in script.js ---------- */
+
+/* No background here on purpose: this container always covers the full
+   viewport (including over the hero/footer, at any scroll position) since
+   it's position:fixed inside a stacking context that paints above .hero.
+   It must stay visually transparent except where an .image-layer is
+   actually opaque, or it would permanently blot out the hero/footer. */
+.image-stack {
+  position: fixed;
+  inset: 0;
+  height: 100vh;
+  height: 100dvh;
+  z-index: 0;
+}
+
+.image-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  background: var(--charcoal);
+}
+
+.media-inner {
+  position: absolute;
+  inset: -12% 0;
+  will-change: transform;
+}
+
+.media-inner__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.media-inner.is-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image: repeating-linear-gradient(135deg, var(--charcoal) 0 26px, var(--charcoal-light) 26px 52px);
+}
+
+.placeholder-label {
+  font-family: var(--font-body);
+  color: #b8b8b8;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  padding: 0.4rem 0.9rem;
+  border: 1px dashed #555;
+  background: rgba(10, 10, 10, 0.55);
+}
+
+/* Hero gets a slow cinematic zoom; sections get JS-driven scroll parallax instead. */
+.hero__media .media-inner {
+  animation: kenburns 22s ease-in-out infinite alternate;
+}
+
+.hero__media .media-inner.is-placeholder {
+  align-items: flex-end;
+  justify-content: flex-start;
+}
+
+.hero__media .placeholder-label {
+  margin: 1.5rem;
+}
+
+@keyframes kenburns {
+  0%   { transform: scale(1.04) translateY(0); }
+  100% { transform: scale(1.16) translateY(-2.5%); }
+}
+
+/* ---------- Hero ---------- */
+
+.hero {
+  position: relative;
+  height: 100vh;
+  min-height: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.hero__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    radial-gradient(ellipse at center, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.72) 65%, rgba(0,0,0,0.9) 100%),
+    linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.2) 38%, rgba(0,0,0,0.6) 100%);
+}
+
+.hero__content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 2.5rem 1.75rem;
+  margin: 0 1.5rem;
+  max-width: 840px;
+}
+
+.hero__title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  color: var(--yellow);
+  font-size: clamp(2.75rem, 9vw, 7rem);
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin: 0 0 1.25rem 0;
+}
+
+.hero__tagline {
+  font-family: var(--font-body);
+  color: var(--cream);
+  font-size: clamp(1rem, 2vw, 1.3rem);
+  margin: 0;
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.9s ease 0.5s, transform 0.9s ease 0.5s;
+}
+
+.hero.is-visible .hero__tagline {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hero__cta {
+  display: none;
+  margin-top: 1.75rem;
+  padding: 0.85rem 2rem;
+  background: var(--yellow);
+  color: var(--black);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.9s ease 0.65s, transform 0.9s ease 0.65s, background-color 0.2s ease;
+}
+
+.hero__cta:hover {
+  background: #ffd633;
+  text-decoration: none;
+}
+
+.hero__cta.has-link {
+  display: inline-block;
+}
+
+.hero.is-visible .hero__cta {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hero__scroll-indicator {
+  position: absolute;
+  bottom: 2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.chevron {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-right: 2px solid var(--yellow);
+  border-bottom: 2px solid var(--yellow);
+  transform: rotate(45deg);
+  animation: bounce 1.8s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: rotate(45deg) translate(0, 0); }
+  50% { transform: rotate(45deg) translate(6px, 6px); }
+}
+
+/* ---------- Kinetic headline reveal (word-by-word) ---------- */
+
+.kinetic-heading .word-mask {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding-bottom: 0.08em;
+  margin-bottom: -0.08em;
+}
+
+.kinetic-heading .word {
+  display: inline-block;
+  transform: translateY(115%);
+  transition: transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.is-visible .kinetic-heading .word {
+  transform: translateY(0);
+}
+
+/* ---------- Content sections (full-bleed, overlaid text) ---------- */
+
+/* No position/z-index here on purpose: an explicit z-index would make this
+   whole subtree (including the fixed .image-stack) paint above .site-footer
+   regardless of DOM order, letting the last section's image bleed over the
+   footer text. Leaving it unpositioned means ordinary tree order applies:
+   .image-stack and the .content-section panels stack between .hero and
+   .site-footer, with each .image-layer's own opacity (not paint order)
+   controlling what's actually visible at any given scroll position. */
+
+.content-section {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-end;
+}
+
+.content-section.text-left {
+  justify-content: flex-start;
+}
+
+.content-section.text-right {
+  justify-content: flex-end;
+}
+
+.content-section__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.92) 100%);
+}
+
+/* Hidden unless prefers-reduced-motion: reduce (see media query below),
+   in which case it provides this section's own full-bleed image, since
+   the shared cross-fading .image-stack is switched off entirely. */
+.content-section__media-fallback {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.content-section__index {
+  position: absolute;
+  top: 2rem;
+  z-index: 2;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2.5rem, 7vw, 5rem);
+  color: var(--yellow);
+  opacity: 0.22;
+  line-height: 1;
+}
+
+.content-section.text-left .content-section__index {
+  left: 1.5rem;
+}
+
+.content-section.text-right .content-section__index {
+  right: 1.5rem;
+}
+
+.content-section__text {
+  position: relative;
+  z-index: 2;
+  max-width: 640px;
+  width: calc(100% - 2.5rem);
+  margin: 0 1.25rem 2.5rem;
+  padding: 2.25rem 1.75rem;
+}
+
+.content-section__kicker {
+  display: block;
+  width: 40px;
+  height: 3px;
+  background: var(--yellow);
+  margin-bottom: 1.25rem;
+}
+
+.content-section__heading {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--yellow);
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  margin: 0 0 1rem 0;
+}
+
+.content-section__body {
+  font-family: var(--font-body);
+  color: var(--cream);
+  font-size: 1.1rem;
+  line-height: 1.65;
+  margin: 0;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.8s ease 0.25s, transform 0.8s ease 0.25s;
+}
+
+.content-section.is-visible .content-section__body {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.content-section__caption {
+  font-family: var(--font-body);
+  color: #a8a39a;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-top: 1rem;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.8s ease 0.4s, transform 0.8s ease 0.4s;
+}
+
+.content-section.is-visible .content-section__caption {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---------- Liquid glass panel (dynamically tinted per-image, via
+   --tint-r/--tint-g/--tint-b set by extractTint() in script.js) ---------- */
+
+.glass-panel {
+  background: rgba(var(--tint-r), var(--tint-g), var(--tint-b), 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-top-color: rgba(255, 255, 255, 0.32);
+  border-radius: 20px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  transition: background-color 0.6s ease;
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .glass-panel {
+    background: rgba(var(--tint-r), var(--tint-g), var(--tint-b), 0.22);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+  }
+}
+
+/* ---------- Footer ---------- */
+
+.site-footer {
+  position: relative;
+  background: var(--black);
+  padding: 3rem 1.5rem 2.5rem;
+  text-align: center;
+}
+
+.site-footer__rule {
+  width: 60px;
+  height: 3px;
+  background: var(--yellow);
+  margin: 0 auto 1.5rem;
+}
+
+.site-footer__credit {
+  font-family: var(--font-body);
+  color: #a8a39a;
+  font-size: 0.85rem;
+  margin: 0 0 0.75rem 0;
+}
+
+.site-footer__links {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.site-footer__links a {
+  position: relative;
+  padding-bottom: 0.25rem;
+}
+
+.site-footer__links a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0%;
+  height: 1px;
+  background: var(--yellow);
+  transition: width 0.3s ease;
+}
+
+.site-footer__links a:hover::after {
+  width: 100%;
+}
+
+/* ---------- Breakpoints ---------- */
+
+@media (min-width: 768px) {
+  .content-section {
+    align-items: center;
+  }
+
+  .content-section__text {
+    width: auto;
+    margin: 0 6vw;
+    padding: 3rem 2.5rem;
+  }
+
+  .content-section__scrim {
+    background: none;
+  }
+
+  .content-section.text-left .content-section__scrim {
+    background: linear-gradient(90deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.55) 38%, rgba(0,0,0,0.08) 72%, transparent 100%);
+  }
+
+  .content-section.text-right .content-section__scrim {
+    background: linear-gradient(270deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.55) 38%, rgba(0,0,0,0.08) 72%, transparent 100%);
+  }
+}
+
+@media (min-width: 1200px) {
+  .content-section__heading {
+    font-size: clamp(2.25rem, 4vw, 3.75rem);
+  }
+
+  .content-section__text {
+    margin: 0 8vw;
+    padding: 3.5rem 3rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .hero__media .media-inner,
+  .chevron {
+    animation: none;
+  }
+
+  .kinetic-heading .word,
+  .hero__tagline,
+  .content-section__body,
+  .content-section__caption {
+    transition: none;
+    transform: none;
+    opacity: 1;
+  }
+
+  /* Un-pin the cross-fade stack entirely and fall back to one full-bleed,
+     always-visible image per section (content-section__media-fallback,
+     populated alongside the image-stack layer in script.js), exactly like
+     the original stacked-section design — no JS-driven motion required to
+     see any content. */
+  .image-stack {
+    display: none;
+  }
+
+  .content-section {
+    overflow: hidden;
+  }
+
+  .content-section__media-fallback {
+    display: block;
+  }
+}

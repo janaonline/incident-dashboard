@@ -1,0 +1,53 @@
+{
+  "_instructions": "Edit the values below with your real content. Do not edit the field names. Add or remove objects inside 'sections' to add or remove sections from the site - the site will render however many you include (up to 10 is the tested range). Put your real images in an /images folder and reference them by filename in 'image'. 'site.cta' is optional - omit it entirely to hide the hero button.",
+
+  "site": {
+    "title": "India Safety Dashboard",
+    "tagline": "A data-driven look at governance failure patterns behind fatal public safety incidents in urban India, 2016-2026, based on open source data.",
+    "heroImage": "images/image1.jpg",
+    "heroImageAlt": "Aerial view of a lakeside Indian town at golden hour, with dense waterside buildings reflected in the water.",
+    "cta": {
+      "label": "View the Live Dashboard",
+      "url": "dashboard/index.html"
+    }
+  },
+
+  "sections": [
+    {
+      "heading": "Governance Failure, Mapped",
+      "body": "An interactive map plots every documented incident across urban India by city and state, sized by death toll and colored by category - click any point to read the full record.",
+      "image": "images/image1.jpg",
+      "imageAlt": "Aerial view of a lakeside Indian town at golden hour, buildings reflected in the water.",
+      "caption": "Interactive incident map"
+    },
+    {
+      "heading": "Where the System Breaks Down",
+      "body": "Each incident is traced through the regulatory chain that should have prevented it - licence, inspection, enforcement, response, and conviction - to see exactly where accountability stalls.",
+      "image": "images/image3.jpg",
+      "imageAlt": "Dense hillside town in India blanketed in fog, with colorful rooftops climbing the slope.",
+      "caption": "Licence to inspection to enforcement to response to conviction"
+    },
+    {
+      "heading": "Known Risks, Documented Warnings",
+      "body": "Many incidents had a documented prior warning - a notice issued, a building flagged, an approval denied - before anyone died. The dashboard surfaces how often a known risk preceded a preventable failure.",
+      "image": "images/image4.jpg",
+      "imageAlt": "Busy Indian street market with cycle rickshaws, shop signage, and pedestrians.",
+      "caption": "Enforcement failure analysis"
+    },
+    {
+      "heading": "Built for Reform",
+      "body": "Compiled from news reports, government inquiries, court records, CAG audits, and credible media investigations - built for city administrators, regulators, and policymakers who need evidence, not anecdotes.",
+      "image": "images/image5.jpg",
+      "imageAlt": "Quiet narrow residential alley between aging apartment buildings in an Indian city.",
+      "caption": "Open data, by Janaagraha"
+    }
+  ],
+
+  "footer": {
+    "credit": "India Safety Dashboard - an open governance-data project by Janaagraha",
+    "links": [
+      { "label": "View Dashboard", "url": "dashboard/index.html" },
+      { "label": "Contact", "url": "mailto:you@example.com" }
+    ]
+  }
+}
