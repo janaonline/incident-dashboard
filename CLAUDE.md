@@ -168,6 +168,21 @@ bright) rather than a flat surface. Don't reintroduce a lighter caption color
 on the assumption the panel is a fixed light tone — verify against a real
 screenshot, not just the panel's nominal tint value.
 
+`.hero__title` and `.content-section__heading` also needed a light-mode
+override, for the same underlying reason: `var(--yellow)` in light mode is
+`#b8860b` (amber), which sits in a contrast deadzone against the glass panel
+— the panel's actual rendered brightness is dominated by the real, blurred
+photo behind it (`backdrop-filter`), only lightly tinted at low alpha, so it
+varies with the photo and amber isn't reliably dark or light enough against
+it either way. Both selectors get
+`[data-theme="light"] { color: var(--cream); }` instead — reusing the same
+dark-ink color already proven legible for body text in this same panel
+context, rather than introducing a new color. `.content-section__kicker`
+(decorative accent bar, not text) and `.content-section__index` (the faint
+"01"/"02" numeral, which sits outside the glass-panel directly over the
+photo, not inside a card) deliberately keep `var(--yellow)` — this fix is
+scoped to text actually inside a `.glass-panel`. Dark mode is untouched.
+
 ## Design constraints (do not relax without asking)
 
 - Palette: black, yellow, and one cream/off-white only (see CSS variables
@@ -534,6 +549,28 @@ future card that pins its own tint + hardcoded text color this way needs the
 same per-theme alpha check — `.glass-panel`'s default alpha assumes the
 tinted color and the page background are compatible in lightness, which only
 holds in dark mode for this panel.
+
+`.glass-panel`'s blur/border/shadow mechanics were tuned to match the parent
+showcase site's `.glass-panel` exactly (`border`/`border-top-color` alpha
+`0.14`/`0.32`, `border-radius: 20px`, `box-shadow: 0 12px 40px
+rgba(0,0,0,0.35)`, a `background-color 0.6s ease` transition, and
+`@supports` blur/saturate/alpha `20px`/`160%`/`0.22`) — by owner request, to
+look like the same "liquid glass" family in both projects. This is visual
+mechanics only: dashboard cards still flip color with the theme exactly as
+before (light cream + dark text in light mode, dark + light text in dark
+mode) — no dynamic per-card photo-sampled tinting was added, since the
+dashboard has no photo backgrounds to sample from and porting that system
+was explicitly ruled out as unnecessary complexity. `border-radius` and
+`box-shadow` are set as literals scoped to this one rule rather than by
+changing the shared `--radius-lg`/`--shadow` tokens, since `--shadow` is
+still used elsewhere (`.map-tooltip`, `.pattern-card`'s inline inset
+shadow) and must keep its own `0.45` alpha there. Known minor cosmetic
+quirk: `.stat-card`/`.question-card` each set their own `transition`
+shorthand (for their scroll-reveal opacity/transform animation), which —
+same CSS specificity, later in source order — silently overrides
+`.glass-panel`'s new `background-color` transition for just those two card
+types; their background still changes correctly on toggle, it just snaps
+instead of fading, which is imperceptible next to the ripple's own motion.
 
 Chart axis/label colors are resolved per-render via `axisColors()` (dark:
 `#8A8782`/`#D9D6CE`, light: `#4a463e`/`#1c1b18`) instead of the old fixed

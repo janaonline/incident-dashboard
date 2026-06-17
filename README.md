@@ -109,9 +109,12 @@ then visit `http://localhost:8000/`.
   (body text) stay fixed in dark mode (the default) — **except** the text
   panels, which pick up a soft, dynamic color tint sampled from their own
   photo (a "liquid glass" frosted-panel effect), by explicit request. Light
-  mode swaps in a full light palette (yellow becomes a darker amber for
-  text/chrome, to stay readable on a light background) — see `CLAUDE.md`
-  for the full token breakdown.
+  mode swaps in a full light palette: yellow becomes a darker amber for
+  chrome (links, the kicker bar, the scroll-progress bar); hero and section
+  headings switch to dark ink instead, since amber doesn't read reliably
+  against the liquid-glass panels, whose actual brightness varies with
+  whatever photo is behind them — see `CLAUDE.md` for the full token
+  breakdown.
 - Fonts: Playfair Display (headlines) and Inter (body), loaded from Google
   Fonts.
 - Layout: every section is a full-bleed, full-viewport-height image with

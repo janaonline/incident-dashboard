@@ -412,6 +412,17 @@ a:hover {
   margin: 0 0 1rem 0;
 }
 
+/* Amber (light-mode --yellow) sits in a contrast deadzone against the
+   glass-panel, which is dominated by the real blurred photo behind it
+   (only lightly tinted) rather than a flat color - its brightness varies
+   with the photo, and amber isn't reliably dark or light enough either
+   way. Headings fall back to the same dark-ink color already proven
+   legible for body text in this panel context. */
+[data-theme="light"] .hero__title,
+[data-theme="light"] .content-section__heading {
+  color: var(--cream);
+}
+
 .content-section__body {
   font-family: var(--font-body);
   color: var(--cream);
