@@ -100,10 +100,18 @@ then visit `http://localhost:8000/`.
 
 ## Design notes
 
+- Theme: a light/dark toggle sits top-right on the page (the sun/moon
+  icon), switching with a 1-second ripple animation. The choice persists
+  across reloads and stays in sync with the bundled dashboard's own toggle.
+  Reduced-motion settings and browsers without the View Transitions API get
+  an instant swap instead of the ripple.
 - Colors: black (background), yellow (accent/headlines/chrome), cream
-  (body text) stay fixed everywhere — **except** the text panels, which
-  pick up a soft, dynamic color tint sampled from their own photo (a
-  "liquid glass" frosted-panel effect), by explicit request.
+  (body text) stay fixed in dark mode (the default) — **except** the text
+  panels, which pick up a soft, dynamic color tint sampled from their own
+  photo (a "liquid glass" frosted-panel effect), by explicit request. Light
+  mode swaps in a full light palette (yellow becomes a darker amber for
+  text/chrome, to stay readable on a light background) — see `CLAUDE.md`
+  for the full token breakdown.
 - Fonts: Playfair Display (headlines) and Inter (body), loaded from Google
   Fonts.
 - Layout: every section is a full-bleed, full-viewport-height image with
@@ -135,7 +143,7 @@ The core finding: these are not accidents. Nearly half of all incidents had docu
 
 ### For technical readers
 
-A single-file, zero-build static web application. All logic, styles, and markup live in `index.html`. Data is fetched live at page load from a Google Sheet using the CSV export endpoint, parsed with PapaParse, and rendered using Chart.js (charts), D3.js + TopoJSON (India map), and vanilla DOM manipulation (everything else). No server, no bundler, no npm. The UI uses a dark, black-background theme with translucent "glass panel" cards, a kinetic word-reveal headline, and a scroll-progress bar — visually matching the showcase site that links to this dashboard, though the two are independent codebases with no shared files.
+A single-file, zero-build static web application. All logic, styles, and markup live in `index.html`. Data is fetched live at page load from a Google Sheet using the CSV export endpoint, parsed with PapaParse, and rendered using Chart.js (charts), D3.js + TopoJSON (India map), and vanilla DOM manipulation (everything else). No server, no bundler, no npm. The UI defaults to a dark, black-background theme with translucent "glass panel" cards, a kinetic word-reveal headline, and a scroll-progress bar — visually matching the showcase site that links to this dashboard, though the two are independent codebases with no shared files. A top-right toggle switches to a light theme (charts, map, and all cards re-color); the choice persists and stays in sync with the showcase site's own toggle.
 
 ## Dashboard sections
 

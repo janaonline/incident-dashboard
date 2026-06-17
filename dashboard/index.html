@@ -2,6 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>
+  // Runs before CSS/paint - prevents a flash of the wrong theme.
+  try {
+    var t = localStorage.getItem('isd-theme');
+    document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+  } catch (e) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>India Safety Dashboard — Based on Open Source Data</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,7 +22,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
+:root,
+[data-theme="dark"] {
   --red: #FF6B6B; --red-light: rgba(255,107,107,0.16); --red-mid: #FF8A80;
   --amber: #F5A623; --blue: #5B9BD9; --green: #6FCF6F; --purple: #9F97E8;
   --gray: #9A9890; --text: #F3EFE6; --text-muted: #B8B4AC; --text-light: #8A8782;
@@ -27,9 +37,27 @@
   --font-display: 'Playfair Display', serif;
   --yellow: #f5c400; --black: #0a0a0a; --charcoal: #161616; --charcoal-light: #1f1f1f; --cream: #f3efe6;
   --tint-r: 24; --tint-g: 24; --tint-b: 24;
+  --bg-gradient: radial-gradient(ellipse at top, var(--charcoal) 0%, var(--black) 60%);
+  --map-stroke: rgba(255,255,255,0.25); --map-nodata: #2A2A2A;
+  --tooltip-bg: #1A1A1A; --tooltip-border: var(--border-md);
+  --track-bg: #262626;
+  --toggle-bg: rgba(0,0,0,.45); --toggle-fg: var(--yellow); --toggle-border: rgba(255,255,255,.18);
+}
+[data-theme="light"] {
+  --text: #1c1b18; --text-muted: #4a463e; --text-light: #6d685f;
+  --bg: #f7f4ec; --charcoal: #efeadd; --black: #f7f4ec;
+  --surface: rgba(0,0,0,0.04); --surface-2: rgba(0,0,0,0.025);
+  --border: rgba(0,0,0,0.10); --border-md: rgba(0,0,0,0.16);
+  --bg-gradient: radial-gradient(ellipse at top, #fbf8f0 0%, #f1ece0 60%);
+  --tint-r: 245; --tint-g: 242; --tint-b: 233;
+  --map-stroke: rgba(0,0,0,0.28); --map-nodata: #e3ded1;
+  --tooltip-bg: #ffffff; --tooltip-border: rgba(0,0,0,0.16);
+  --track-bg: #e3ded1;
+  --cream: #1c1b18;
+  --toggle-bg: rgba(255,255,255,.7); --toggle-fg: #1c1b18; --toggle-border: rgba(0,0,0,.18);
 }
 html { scroll-behavior: smooth; }
-body { font-family: var(--font); background: radial-gradient(ellipse at top, var(--charcoal) 0%, var(--black) 60%); color: var(--text); font-size: 15px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+body { font-family: var(--font); background: var(--bg-gradient); color: var(--text); font-size: 15px; line-height: 1.65; -webkit-font-smoothing: antialiased; transition: background-color 0.2s ease, color 0.2s ease; }
 
 .glass-panel {
   background: rgba(var(--tint-r), var(--tint-g), var(--tint-b), 0.45);
@@ -45,7 +73,29 @@ body { font-family: var(--font); background: radial-gradient(ellipse at top, var
     -webkit-backdrop-filter: blur(16px) saturate(150%);
   }
 }
+[data-theme="light"] .glass-panel {
+  border-color: rgba(0,0,0,0.12);
+  border-top-color: rgba(0,0,0,0.06);
+}
 #scrollProgress { position: fixed; top: 0; left: 0; height: 3px; width: 0%; background: var(--yellow); z-index: 999; transition: width 0.1s linear; }
+
+.theme-toggle {
+  position: fixed; top: 16px; right: 16px; z-index: 1000;
+  width: 42px; height: 42px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; border: 1px solid var(--toggle-border);
+  background: var(--toggle-bg); color: var(--toggle-fg);
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease;
+}
+.theme-toggle:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+.theme-toggle .icon-sun { display: none; }
+[data-theme="light"] .theme-toggle .icon-moon { display: none; }
+[data-theme="light"] .theme-toggle .icon-sun { display: inline; }
+
+::view-transition-old(root),
+::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-new(root) { z-index: 1; }
+::view-transition-old(root) { z-index: 0; }
 
 .kinetic-heading .word-mask { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: 0.08em; margin-bottom: -0.08em; }
 .kinetic-heading .word { display: inline-block; transform: translateY(115%); transition: transform 0.85s cubic-bezier(0.16,1,0.3,1); }
@@ -70,10 +120,10 @@ body { font-family: var(--font); background: radial-gradient(ellipse at top, var
   #scrollProgress { display: none; }
 }
 
-.header { background: linear-gradient(135deg, #4A1818, #2A1010); color: var(--cream); padding: clamp(24px,5vw,40px) clamp(16px,4vw,32px) clamp(20px,4vw,32px); }
+.header { background: linear-gradient(135deg, #4A1818, #2A1010); color: #f3efe6; padding: clamp(24px,5vw,40px) clamp(16px,4vw,32px) clamp(20px,4vw,32px); }
 .header-inner { max-width: 1100px; margin: 0 auto; }
 .header-eyebrow { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; opacity: 0.65; margin-bottom: 10px; }
-.header h1 { font-family: var(--font-display); font-size: clamp(28px,6vw,46px); font-weight: 900; line-height: 1.15; letter-spacing: -0.5px; margin-bottom: 10px; color: var(--yellow); }
+.header h1 { font-family: var(--font-display); font-size: clamp(28px,6vw,46px); font-weight: 900; line-height: 1.15; letter-spacing: -0.5px; margin-bottom: 10px; color: #f5c400; }
 .header-sub { font-size: clamp(13px,2vw,15px); line-height: 1.5; opacity: 0.78; max-width: 600px; }
 .data-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; font-size: 11px; padding: 4px 12px; border-radius: 20px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); }
 .data-status .dot { width: 7px; height: 7px; border-radius: 50%; background: #4ADE80; }
@@ -97,6 +147,12 @@ body { font-family: var(--font); background: radial-gradient(ellipse at top, var
 
 .hero-enforcement { --tint-r: 140; --tint-g: 35; --tint-b: 35; padding: clamp(24px,4vw,36px); color: #fff; position: relative; overflow: hidden; }
 .hero-enforcement::before { content:''; position:absolute; top:-60px; right:-60px; width:260px; height:260px; border-radius:50%; background:rgba(255,255,255,0.04); pointer-events:none; }
+/* This panel's dark-red tint + white text is always-on (not photo-derived,
+   not theme-derived) - at the low alpha .glass-panel normally uses, a light
+   page background bleeds through and turns it pale pink, breaking the white
+   text. Raise the alpha in light mode so the panel stays a solid dark red
+   regardless of what's behind it. */
+[data-theme="light"] .hero-enforcement { background: rgba(var(--tint-r), var(--tint-g), var(--tint-b), 0.92); }
 .hero-top { display: flex; align-items: flex-start; gap: clamp(16px,3vw,28px); margin-bottom: clamp(18px,3vw,26px); position: relative; z-index: 1; }
 .hero-pct { font-family: var(--font-tight); font-size: clamp(60px,13vw,96px); font-weight: 800; line-height: 0.9; letter-spacing: -2px; flex-shrink: 0; }
 .hero-text-block { flex: 1; padding-top: 8px; }
@@ -122,6 +178,8 @@ body { font-family: var(--font); background: radial-gradient(ellipse at top, var
 .chain-badge { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-top: 8px; display: inline-block; letter-spacing: 0.3px; }
 .badge-broken { background: rgba(255,107,107,0.22); color: #FFB4B4; }
 .badge-ok { background: rgba(111,207,111,0.22); color: #BCEFBC; }
+[data-theme="light"] .badge-broken { background: rgba(255,107,107,0.18); color: #B23B3B; }
+[data-theme="light"] .badge-ok { background: rgba(111,207,111,0.20); color: #2F6B2F; }
 .chain-arrow { display: flex; align-items: center; justify-content: center; padding: 0 5px; flex-shrink: 0; color: var(--text-light); font-size: 16px; align-self: center; }
 .chain-note { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); line-height: 1.65; }
 .chain-note strong { color: var(--red); }
@@ -140,7 +198,7 @@ body { font-family: var(--font); background: radial-gradient(ellipse at top, var
 .map-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; font-size: 11px; font-weight: 500; color: var(--text-muted); }
 .leg-item { display: flex; align-items: center; gap: 5px; }
 .leg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.map-tooltip { position: absolute; background: #1A1A1A; border: 1px solid var(--border-md); border-radius: var(--radius); padding: 12px 14px; font-size: 12px; pointer-events: none; display: none; z-index: 20; max-width: 230px; box-shadow: var(--shadow); }
+.map-tooltip { position: absolute; background: var(--tooltip-bg); border: 1px solid var(--tooltip-border); border-radius: var(--radius); padding: 12px 14px; font-size: 12px; pointer-events: none; display: none; z-index: 20; max-width: 230px; box-shadow: var(--shadow); }
 .tt-title { font-weight: 700; font-size: 13px; margin-bottom: 3px; color: var(--text); }
 .tt-deaths { color: var(--red); font-weight: 700; font-size: 13px; }
 .tt-sub { color: var(--text-muted); font-size: 11px; margin-top: 4px; line-height: 1.45; }
@@ -159,14 +217,14 @@ body { font-family: var(--font); background: radial-gradient(ellipse at top, var
 .acc-row { margin-bottom: 14px; }
 .acc-label { display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 500; margin-bottom: 5px; color: var(--text); }
 .acc-pct { font-weight: 700; }
-.acc-track { height: 7px; background: #262626; border-radius: 4px; overflow: hidden; }
+.acc-track { height: 7px; background: var(--track-bg); border-radius: 4px; overflow: hidden; }
 .acc-fill { height: 100%; border-radius: 4px; }
 .acc-note { font-size: 11px; color: var(--text-muted); margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); line-height: 1.6; }
 
 .inst-section { padding: clamp(18px,3vw,24px); }
 .inst-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 .inst-name { font-size: 12px; font-weight: 500; color: var(--text); flex: 0 0 220px; line-height: 1.35; }
-.inst-track { flex: 1; height: 20px; background: #262626; border-radius: 4px; overflow: hidden; }
+.inst-track { flex: 1; height: 20px; background: var(--track-bg); border-radius: 4px; overflow: hidden; }
 .inst-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; justify-content: flex-end; padding-right: 7px; min-width: 50px; }
 .inst-fill span { font-size: 10px; font-weight: 700; color: rgba(0,0,0,0.78); white-space: nowrap; }
 .inst-note { font-size: 11px; color: var(--text-muted); margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); line-height: 1.65; }
@@ -205,6 +263,11 @@ body { font-family: var(--font); background: radial-gradient(ellipse at top, var
 .badge-unk { background: rgba(255,255,255,0.08); color: #B8B4AC; }
 .badge-pending { background: rgba(245,166,35,0.22); color: #FFD9A0; }
 .badge-repeat { background: rgba(244,114,160,0.20); color: #FAC2DA; }
+[data-theme="light"] .badge-warn { background: rgba(255,107,107,0.18); color: #B23B3B; }
+[data-theme="light"] .badge-nowarn { background: rgba(111,207,111,0.20); color: #2F6B2F; }
+[data-theme="light"] .badge-unk { background: rgba(0,0,0,0.06); color: #5a554c; }
+[data-theme="light"] .badge-pending { background: rgba(245,166,35,0.22); color: #8a5a0a; }
+[data-theme="light"] .badge-repeat { background: rgba(244,114,160,0.22); color: #9c3865; }
 .cat-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
 .inc-detail { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); line-height: 1.65; }
 .inc-detail strong { color: var(--text); font-weight: 600; }
@@ -224,9 +287,23 @@ body { font-family: var(--font); background: radial-gradient(ellipse at top, var
 .loading-state { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
 .error-state { background: rgba(255,107,107,0.12); border: 1px solid rgba(255,107,107,0.35); border-radius: var(--radius); padding: 16px 20px; color: #FFC2C2; font-size: 13px; line-height: 1.6; margin: 20px 0; }
 .error-state code { background: rgba(255,107,107,0.18); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 11px; }
+[data-theme="light"] .error-state { color: #8a2020; }
 </style>
 </head>
 <body>
+
+<button id="themeToggle" class="theme-toggle" type="button"
+        aria-label="Switch to light theme" aria-pressed="false">
+  <svg class="theme-toggle__icon icon-moon" viewBox="0 0 24 24" aria-hidden="true" width="20" height="20">
+    <path fill="currentColor" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
+  </svg>
+  <svg class="theme-toggle__icon icon-sun" viewBox="0 0 24 24" aria-hidden="true" width="20" height="20">
+    <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/>
+    </g>
+  </svg>
+</button>
 
 <div id="scrollProgress" aria-hidden="true"></div>
 
@@ -499,8 +576,11 @@ const catColors = {
   'Other': '#9A9890'
 };
 function catColor(c){ return catColors[c] || '#9A9890'; }
-const CHART_AXIS_MUTED = '#8A8782';
-const CHART_AXIS_LABEL = '#D9D6CE';
+function axisColors() {
+  return document.documentElement.getAttribute('data-theme') === 'light'
+    ? { muted: '#4a463e', label: '#1c1b18' }
+    : { muted: '#8A8782', label: '#D9D6CE' };
+}
 
 /* ============================================================
    DATA LOADING
@@ -792,6 +872,8 @@ function setMapView(view, btn) {
   renderMap();
 }
 
+let TOPO_CACHE = null;
+
 function renderMap() {
   const svgSel = d3.select('#indiaMap');
   svgSel.selectAll('*').remove();
@@ -824,7 +906,7 @@ function renderMap() {
     stateAgg[i.state].count += 1;
   });
 
-  d3.json('https://cdn.jsdelivr.net/npm/datamaps@0.5.10/src/js/data/ind.topo.json').then(data => {
+  function drawMap(data) {
     const features = topojson.feature(data, data.objects.ind).features;
 
     svgSel.selectAll('path.state-path').data(features).join('path')
@@ -832,9 +914,9 @@ function renderMap() {
       .attr('d', pathGen)
       .attr('fill', d => {
         const key = matchStateName(d.properties.name || '');
-        return key ? getStateColor(stateAgg[key].deaths) : '#2A2A2A';
+        return key ? getStateColor(stateAgg[key].deaths) : 'var(--map-nodata)';
       })
-      .attr('stroke','rgba(255,255,255,0.25)').attr('stroke-width', 0.7)
+      .attr('stroke','var(--map-stroke)').attr('stroke-width', 0.7)
       .style('cursor', mapView === 'state' ? 'pointer' : 'default')
       .on('mouseover', function(event, d) {
         const key = matchStateName(d.properties.name || '');
@@ -845,7 +927,7 @@ function renderMap() {
       })
       .on('mouseout', function() {
         hideTT();
-        d3.select(this).attr('stroke','rgba(255,255,255,0.25)').attr('stroke-width', 0.7);
+        d3.select(this).attr('stroke','var(--map-stroke)').attr('stroke-width', 0.7);
       });
 
     if (mapView === 'state') {
@@ -891,10 +973,19 @@ function renderMap() {
     }
 
     renderMapLegend();
-  }).catch(() => {
-    svgSel.append('text').attr('x',W/2).attr('y',H/2).attr('text-anchor','middle')
-      .attr('fill','#aaa').attr('font-size',14).text('Map unavailable — browse incidents below');
-  });
+  }
+
+  if (TOPO_CACHE) {
+    drawMap(TOPO_CACHE);
+  } else {
+    d3.json('https://cdn.jsdelivr.net/npm/datamaps@0.5.10/src/js/data/ind.topo.json').then(data => {
+      TOPO_CACHE = data;
+      drawMap(data);
+    }).catch(() => {
+      svgSel.append('text').attr('x',W/2).attr('y',H/2).attr('text-anchor','middle')
+        .attr('fill','#aaa').attr('font-size',14).text('Map unavailable — browse incidents below');
+    });
+  }
 }
 
 function renderMapLegend() {
@@ -970,6 +1061,7 @@ function renderPatterns() {
    CATEGORY CHARTS
    ============================================================ */
 function renderCategoryCharts() {
+  const ax = axisColors();
   const agg = {};
   INCIDENTS.forEach(i => {
     if (!agg[i.category]) agg[i.category] = {count:0, deaths:0};
@@ -985,8 +1077,8 @@ function renderCategoryCharts() {
     data:{ labels: sortedByCount.map(e=>e[0]), datasets:[{ data: sortedByCount.map(e=>e[1].count), backgroundColor: sortedByCount.map(e=>catColor(e[0])), borderWidth:0, borderRadius:4 }]},
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}, tooltip:{callbacks:{label: ctx => ' ' + ctx.parsed.x + ' incidents'}}},
-      scales:{ x:{grid:{display:false}, ticks:{color:CHART_AXIS_MUTED, font:{size:11,family:'Inter'}}},
-               y:{grid:{display:false}, ticks:{color:CHART_AXIS_LABEL, font:{size:10,family:'Inter'}, autoSkip:false}}}}
+      scales:{ x:{grid:{display:false}, ticks:{color:ax.muted, font:{size:11,family:'Inter'}}},
+               y:{grid:{display:false}, ticks:{color:ax.label, font:{size:10,family:'Inter'}, autoSkip:false}}}}
   });
 
   if (catDeathChart) catDeathChart.destroy();
@@ -995,8 +1087,8 @@ function renderCategoryCharts() {
     data:{ labels: sortedByDeaths.map(e=>e[0]), datasets:[{ data: sortedByDeaths.map(e=>e[1].deaths), backgroundColor: sortedByDeaths.map(e=>catColor(e[0])), borderWidth:0, borderRadius:4 }]},
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}, tooltip:{callbacks:{label: ctx => ' ' + ctx.parsed.x + ' deaths'}}},
-      scales:{ x:{grid:{display:false}, ticks:{color:CHART_AXIS_MUTED, font:{size:11,family:'Inter'}}},
-               y:{grid:{display:false}, ticks:{color:CHART_AXIS_LABEL, font:{size:10,family:'Inter'}, autoSkip:false}}}}
+      scales:{ x:{grid:{display:false}, ticks:{color:ax.muted, font:{size:11,family:'Inter'}}},
+               y:{grid:{display:false}, ticks:{color:ax.label, font:{size:10,family:'Inter'}, autoSkip:false}}}}
   });
 }
 
@@ -1004,6 +1096,7 @@ function renderCategoryCharts() {
    YEAR CHART
    ============================================================ */
 function renderYearChart() {
+  const ax = axisColors();
   const years = [...new Set(INCIDENTS.map(i=>i.year))].sort((a,b)=>a-b);
   const counts = years.map(y => INCIDENTS.filter(i=>i.year===y).length);
   const deaths = years.map(y => INCIDENTS.filter(i=>i.year===y).reduce((s,i)=>s+i.deaths,0));
@@ -1018,11 +1111,11 @@ function renderYearChart() {
       ]
     },
     options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{display:true, position:'top', labels:{usePointStyle:true, color:CHART_AXIS_LABEL, font:{family:'Inter',size:11}}}},
+      plugins:{legend:{display:true, position:'top', labels:{usePointStyle:true, color:ax.label, font:{family:'Inter',size:11}}}},
       scales:{
-        x:{grid:{display:false}, ticks:{color:CHART_AXIS_MUTED, font:{family:'Inter',size:11}}},
-        y:{position:'left', title:{display:true,text:'Incidents',color:CHART_AXIS_LABEL,font:{family:'Inter',size:11}}, grid:{display:false}, ticks:{color:CHART_AXIS_MUTED, font:{family:'Inter',size:10}}},
-        y1:{position:'right', title:{display:true,text:'Deaths',color:CHART_AXIS_LABEL,font:{family:'Inter',size:11}}, grid:{display:false}, ticks:{color:CHART_AXIS_MUTED, font:{family:'Inter',size:10}}}
+        x:{grid:{display:false}, ticks:{color:ax.muted, font:{family:'Inter',size:11}}},
+        y:{position:'left', title:{display:true,text:'Incidents',color:ax.label,font:{family:'Inter',size:11}}, grid:{display:false}, ticks:{color:ax.muted, font:{family:'Inter',size:10}}},
+        y1:{position:'right', title:{display:true,text:'Deaths',color:ax.label,font:{family:'Inter',size:11}}, grid:{display:false}, ticks:{color:ax.muted, font:{family:'Inter',size:10}}}
       }}
   });
 }
@@ -1031,6 +1124,7 @@ function renderYearChart() {
    GOVERNANCE FAILURE CHART (PDF aggregate, static reference)
    ============================================================ */
 function renderGovFailureChart() {
+  const ax = axisColors();
   const data = [
     {label:'Institutional Negligence', pct:100},
     {label:'Enforcement Failure', pct:73},
@@ -1053,8 +1147,8 @@ function renderGovFailureChart() {
     data:{ labels: data.map(d=>d.label), datasets:[{ data: data.map(d=>d.pct), backgroundColor: colors, borderWidth:0, borderRadius:4 }]},
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}, tooltip:{callbacks:{label: ctx => ' ' + ctx.parsed.x + '% of incidents'}}},
-      scales:{ x:{min:0,max:100, grid:{display:false}, ticks:{color:CHART_AXIS_MUTED, font:{size:11,family:'Inter'}, callback:v=>v+'%'}},
-               y:{grid:{display:false}, ticks:{color:CHART_AXIS_LABEL, font:{size:10.5,family:'Inter'}, autoSkip:false}}}}
+      scales:{ x:{min:0,max:100, grid:{display:false}, ticks:{color:ax.muted, font:{size:11,family:'Inter'}, callback:v=>v+'%'}},
+               y:{grid:{display:false}, ticks:{color:ax.label, font:{size:10.5,family:'Inter'}, autoSkip:false}}}}
   });
 }
 
@@ -1062,6 +1156,7 @@ function renderGovFailureChart() {
    PREVENTABILITY CHART
    ============================================================ */
 function renderPreventChart() {
+  const ax = axisColors();
   const counts = {3:0, 4:0, 5:0};
   INCIDENTS.forEach(i => { if (counts[i.preventability] !== undefined) counts[i.preventability]++; });
   const total = INCIDENTS.length;
@@ -1075,8 +1170,8 @@ function renderPreventChart() {
     data:{ labels, datasets:[{ data: vals, backgroundColor:['#6FCF6F','#3FC4DD','#5B9BD9'], borderRadius:6 }]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}, tooltip:{callbacks:{label: ctx => ` ${ctx.parsed.y} incidents (${pcts[ctx.dataIndex]}%)`}}},
-      scales:{ x:{grid:{display:false}, ticks:{color:CHART_AXIS_MUTED, font:{family:'Inter',size:12}}},
-               y:{grid:{display:false}, ticks:{color:CHART_AXIS_MUTED, font:{family:'Inter',size:11}}, title:{display:true,text:'Number of incidents',color:CHART_AXIS_LABEL,font:{family:'Inter',size:11}}}}}
+      scales:{ x:{grid:{display:false}, ticks:{color:ax.muted, font:{family:'Inter',size:12}}},
+               y:{grid:{display:false}, ticks:{color:ax.muted, font:{family:'Inter',size:11}}, title:{display:true,text:'Number of incidents',color:ax.label,font:{family:'Inter',size:11}}}}}
   });
 }
 
@@ -1084,6 +1179,7 @@ function renderPreventChart() {
    ACCOUNTABILITY
    ============================================================ */
 function renderAccountability() {
+  const ax = axisColors();
   const total = INCIDENTS.length;
   const fir = INCIDENTS.filter(i => isYes(i.govt_inquiry)).length;
   const inquiry = fir;
@@ -1108,8 +1204,8 @@ function renderAccountability() {
     data:{ labels: items.map(i=>i.label), datasets:[{ data: items.map(i=>i.val), backgroundColor: items.map(i=>i.color), borderRadius:4 }]},
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}, tooltip:{callbacks:{label: ctx => ` ${ctx.parsed.x} of ${total} incidents`}}},
-      scales:{ x:{min:0,max:total, grid:{display:false}, ticks:{color:CHART_AXIS_MUTED, font:{size:11,family:'Inter'}}},
-               y:{grid:{display:false}, ticks:{color:CHART_AXIS_LABEL, font:{size:11,family:'Inter'}, autoSkip:false}}}}
+      scales:{ x:{min:0,max:total, grid:{display:false}, ticks:{color:ax.muted, font:{size:11,family:'Inter'}}},
+               y:{grid:{display:false}, ticks:{color:ax.label, font:{size:11,family:'Inter'}, autoSkip:false}}}}
   });
 
   document.getElementById('accBars').innerHTML = items.map(i => {
@@ -1229,8 +1325,94 @@ function renderIncidents() {
 }
 
 /* ============================================================
+   THEME TOGGLE
+   ============================================================ */
+const THEME_KEY = 'isd-theme';
+
+function persistTheme(value) {
+  try {
+    localStorage.setItem(THEME_KEY, value);
+  } catch (err) {
+    /* localStorage unavailable (private mode, etc.) - theme just won't persist */
+  }
+}
+
+function refreshThemedViews() {
+  if (!INCIDENTS.length) return;
+  renderCategoryCharts();
+  renderYearChart();
+  renderGovFailureChart();
+  renderPreventChart();
+  renderAccountability();
+  renderMap();
+}
+
+function switchTheme(next, originEl) {
+  const root = document.documentElement;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (reduce || !document.startViewTransition) {
+    root.setAttribute('data-theme', next);
+    persistTheme(next);
+    refreshThemedViews();
+    return;
+  }
+
+  const rect = originEl.getBoundingClientRect();
+  const x = rect.left + rect.width / 2;
+  const y = rect.top + rect.height / 2;
+  const endRadius = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+
+  const transition = document.startViewTransition(() => {
+    root.setAttribute('data-theme', next);
+    persistTheme(next);
+    refreshThemedViews();
+  });
+
+  transition.ready.then(() => {
+    root.animate(
+      {
+        clipPath: [
+          `circle(0px at ${x}px ${y}px)`,
+          `circle(${endRadius}px at ${x}px ${y}px)`,
+        ],
+      },
+      { duration: 1000, easing: 'ease-in-out', pseudoElement: '::view-transition-new(root)' }
+    );
+  });
+}
+
+function initThemeToggle() {
+  const button = document.getElementById('themeToggle');
+  if (!button) return;
+
+  const syncButton = (theme) => {
+    button.setAttribute('aria-pressed', String(theme === 'light'));
+    button.setAttribute('aria-label', theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme');
+  };
+
+  syncButton(document.documentElement.getAttribute('data-theme') || 'dark');
+
+  button.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = current === 'light' ? 'dark' : 'light';
+    syncButton(next);
+    switchTheme(next, button);
+  });
+
+  window.addEventListener('storage', (e) => {
+    if (e.key === THEME_KEY && e.newValue) {
+      document.documentElement.setAttribute('data-theme', e.newValue);
+      syncButton(e.newValue);
+      refreshThemedViews();
+    }
+  });
+}
+
+/* ============================================================
    INIT
    ============================================================ */
+initThemeToggle();
 initKineticHeading();
 startScrollProgress();
 loadData();

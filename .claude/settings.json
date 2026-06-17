@@ -8,7 +8,17 @@
       "Bash(rm -rf /tmp/pw_verify /c/tmp/pw_verify /tmp/dash_full.png /c/tmp/dash_*.png)",
       "Bash(git diff *)",
       "Bash(grep -v \"^\\\\./\\\\.git\")",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(curl -s http://localhost:8000/)",
+      "Bash(netstat -ano)",
+      "Bash(node -e \"console.log\\(require.resolve\\('playwright'\\)\\)\")",
+      "Bash(npm root *)",
+      "Bash(npm -v)",
+      "Bash(node -e \"console.log\\(require.resolve\\('playwright'\\)\\)\" --require-cwd)",
+      "Bash(node verify_theme.js)",
+      "Bash(node -e ' *)",
+      "Bash(powershell -NoProfile -Command \"Get-Process -Id \\(Get-NetTCPConnection -LocalPort 8001 -ErrorAction SilentlyContinue\\).OwningProcess -ErrorAction SilentlyContinue | Stop-Process -Force\")",
+      "Bash(taskkill //PID 28896 //F)"
     ],
     "additionalDirectories": [
       "C:\\tmp\\pw_verify",
