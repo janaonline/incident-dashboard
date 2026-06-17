@@ -5,10 +5,15 @@
       "Bash(find / -iname \"_verify2.js\" 2>/dev/null)",
       "Read(//d//**)",
       "Bash(pkill -f \"http.server 8731\")",
-      "Bash(rm -rf /tmp/pw_verify /c/tmp/pw_verify /tmp/dash_full.png /c/tmp/dash_*.png)"
+      "Bash(rm -rf /tmp/pw_verify /c/tmp/pw_verify /tmp/dash_full.png /c/tmp/dash_*.png)",
+      "Bash(git diff *)",
+      "Bash(grep -v \"^\\\\./\\\\.git\")",
+      "Bash(git rm *)"
     ],
     "additionalDirectories": [
-      "C:\\tmp\\pw_verify"
+      "C:\\tmp\\pw_verify",
+      "\\tmp",
+      "C:\\Users\\Pattabi Raman\\.claude\\projects\\d--projects-ai-website-learning\\71eb1c27-1e74-4e9e-8857-bff22a2718b7\\tool-results"
     ]
   }
 }
