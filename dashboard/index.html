@@ -6,7 +6,7 @@
 <title>India Safety Dashboard — Based on Open Source Data</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,700&family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -14,24 +14,66 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --red: #A32D2D; --red-light: #FCEBEB; --red-mid: #E24B4A;
-  --amber: #B06A10; --blue: #1557A0; --green: #2E5E0E; --purple: #46409E;
-  --gray: #5A5955; --text: #18181B; --text-muted: #6B7280; --text-light: #9CA3AF;
-  --bg: #F4F2EE; --surface: #FFFFFF; --surface-2: #F9F8F6;
-  --border: rgba(0,0,0,0.09); --border-md: rgba(0,0,0,0.14);
+  --red: #FF6B6B; --red-light: rgba(255,107,107,0.16); --red-mid: #FF8A80;
+  --amber: #F5A623; --blue: #5B9BD9; --green: #6FCF6F; --purple: #9F97E8;
+  --gray: #9A9890; --text: #F3EFE6; --text-muted: #B8B4AC; --text-light: #8A8782;
+  --bg: #0A0A0A; --surface: rgba(255,255,255,0.05); --surface-2: rgba(255,255,255,0.03);
+  --border: rgba(255,255,255,0.10); --border-md: rgba(255,255,255,0.16);
   --radius-sm: 6px; --radius: 10px; --radius-lg: 14px;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow: 0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.25);
+  --shadow: 0 12px 40px rgba(0,0,0,0.45);
   --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-tight: 'Inter Tight', 'Inter', sans-serif;
+  --font-display: 'Playfair Display', serif;
+  --yellow: #f5c400; --black: #0a0a0a; --charcoal: #161616; --charcoal-light: #1f1f1f; --cream: #f3efe6;
+  --tint-r: 24; --tint-g: 24; --tint-b: 24;
 }
 html { scroll-behavior: smooth; }
-body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+body { font-family: var(--font); background: radial-gradient(ellipse at top, var(--charcoal) 0%, var(--black) 60%); color: var(--text); font-size: 15px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
 
-.header { background: var(--red); color: #fff; padding: clamp(24px,5vw,40px) clamp(16px,4vw,32px) clamp(20px,4vw,32px); }
+.glass-panel {
+  background: rgba(var(--tint-r), var(--tint-g), var(--tint-b), 0.45);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-top-color: rgba(255,255,255,0.22);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .glass-panel {
+    background: rgba(var(--tint-r), var(--tint-g), var(--tint-b), 0.30);
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+  }
+}
+#scrollProgress { position: fixed; top: 0; left: 0; height: 3px; width: 0%; background: var(--yellow); z-index: 999; transition: width 0.1s linear; }
+
+.kinetic-heading .word-mask { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: 0.08em; margin-bottom: -0.08em; }
+.kinetic-heading .word { display: inline-block; transform: translateY(115%); transition: transform 0.85s cubic-bezier(0.16,1,0.3,1); }
+.kinetic-heading.is-visible .word { transform: translateY(0); }
+
+.reveal-section { opacity: 0; transform: translateY(20px); transition: opacity 0.8s ease 0.15s, transform 0.8s ease 0.15s; }
+.reveal-section.is-visible { opacity: 1; transform: translateY(0); }
+.stat-card, .question-card { opacity: 0; transform: translateY(16px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.reveal-section.is-visible .stat-card, .reveal-section.is-visible .question-card { opacity: 1; transform: translateY(0); }
+.stat-card:nth-child(1), .question-card:nth-child(1) { transition-delay: 0ms; }
+.stat-card:nth-child(2), .question-card:nth-child(2) { transition-delay: 70ms; }
+.stat-card:nth-child(3), .question-card:nth-child(3) { transition-delay: 140ms; }
+.stat-card:nth-child(4), .question-card:nth-child(4) { transition-delay: 210ms; }
+.question-card:nth-child(5) { transition-delay: 280ms; }
+.question-card:nth-child(6) { transition-delay: 350ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .kinetic-heading .word, .reveal-section, .stat-card, .question-card {
+    transition: none !important; transform: none !important; opacity: 1 !important;
+  }
+  #scrollProgress { display: none; }
+}
+
+.header { background: linear-gradient(135deg, #4A1818, #2A1010); color: var(--cream); padding: clamp(24px,5vw,40px) clamp(16px,4vw,32px) clamp(20px,4vw,32px); }
 .header-inner { max-width: 1100px; margin: 0 auto; }
 .header-eyebrow { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; opacity: 0.65; margin-bottom: 10px; }
-.header h1 { font-family: var(--font-tight); font-size: clamp(26px,5.5vw,42px); font-weight: 800; line-height: 1.1; letter-spacing: -0.5px; margin-bottom: 10px; }
+.header h1 { font-family: var(--font-display); font-size: clamp(28px,6vw,46px); font-weight: 900; line-height: 1.15; letter-spacing: -0.5px; margin-bottom: 10px; color: var(--yellow); }
 .header-sub { font-size: clamp(13px,2vw,15px); line-height: 1.5; opacity: 0.78; max-width: 600px; }
 .data-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; font-size: 11px; padding: 4px 12px; border-radius: 20px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); }
 .data-status .dot { width: 7px; height: 7px; border-radius: 50%; background: #4ADE80; }
@@ -47,13 +89,13 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 
 .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
 @media (max-width:640px) { .stats-grid { grid-template-columns: repeat(2,1fr); } }
-.stat-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: clamp(14px,2.5vw,20px) clamp(12px,2vw,18px); text-align: center; box-shadow: var(--shadow-sm); }
+.stat-card { padding: clamp(14px,2.5vw,20px) clamp(12px,2vw,18px); text-align: center; }
 .stat-num { font-family: var(--font-tight); font-size: clamp(26px,5vw,38px); font-weight: 800; color: var(--red); line-height: 1; margin-bottom: 6px; letter-spacing: -0.5px; }
 .stat-num.amber { color: var(--amber); }
 .stat-num.green { color: var(--green); }
 .stat-label { font-size: 12px; font-weight: 500; color: var(--text-muted); line-height: 1.35; }
 
-.hero-enforcement { background: #8B1F1F; border-radius: var(--radius-lg); padding: clamp(24px,4vw,36px); color: #fff; position: relative; overflow: hidden; box-shadow: var(--shadow); }
+.hero-enforcement { --tint-r: 140; --tint-g: 35; --tint-b: 35; padding: clamp(24px,4vw,36px); color: #fff; position: relative; overflow: hidden; }
 .hero-enforcement::before { content:''; position:absolute; top:-60px; right:-60px; width:260px; height:260px; border-radius:50%; background:rgba(255,255,255,0.04); pointer-events:none; }
 .hero-top { display: flex; align-items: flex-start; gap: clamp(16px,3vw,28px); margin-bottom: clamp(18px,3vw,26px); position: relative; z-index: 1; }
 .hero-pct { font-family: var(--font-tight); font-size: clamp(60px,13vw,96px); font-weight: 800; line-height: 0.9; letter-spacing: -2px; flex-shrink: 0; }
@@ -63,23 +105,23 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .hero-desc { font-size: 13px; opacity: 0.78; line-height: 1.6; }
 .hero-breakdown { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; position: relative; z-index: 1; }
 @media (max-width:520px) { .hero-breakdown { grid-template-columns: 1fr 1fr; } }
-.hb-card { background: rgba(255,255,255,0.1); border-radius: 8px; padding: 14px 16px; border: 1px solid rgba(255,255,255,0.14); }
+.hb-card { background: rgba(255,255,255,0.08); border-radius: 8px; padding: 14px 16px; border: 1px solid rgba(255,255,255,0.14); border-top-color: rgba(255,255,255,0.22); }
 .hb-num { font-family: var(--font-tight); font-size: clamp(20px,4vw,26px); font-weight: 800; margin-bottom: 4px; letter-spacing: -0.5px; }
 .hb-label { font-size: 11px; opacity: 0.72; line-height: 1.4; }
 
-.chain-section { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: clamp(18px,3vw,26px); box-shadow: var(--shadow-sm); }
+.chain-section { padding: clamp(18px,3vw,26px); }
 .chain-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 18px; }
 .chain-flow { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding-bottom: 4px; }
 .chain-step { flex: 1; min-width: 100px; display: flex; flex-direction: column; }
 .chain-step-inner { border-radius: var(--radius); padding: 14px 10px; text-align: center; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.chain-step-inner.broken { background: #FFF5F5; border: 1.5px solid #FBBFBF; }
-.chain-step-inner.ok { background: #F0FAF0; border: 1.5px solid #86EFAC; }
+.chain-step-inner.broken { background: rgba(255,107,107,0.12); border: 1.5px solid rgba(255,107,107,0.45); }
+.chain-step-inner.ok { background: rgba(111,207,111,0.12); border: 1.5px solid rgba(111,207,111,0.45); }
 .chain-step-icon { font-size: 22px; margin-bottom: 7px; }
 .chain-step-name { font-size: 12px; font-weight: 600; margin-bottom: 4px; line-height: 1.25; }
 .chain-step-desc { font-size: 10.5px; color: var(--text-muted); line-height: 1.4; }
 .chain-badge { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-top: 8px; display: inline-block; letter-spacing: 0.3px; }
-.badge-broken { background: #FECACA; color: #991B1B; }
-.badge-ok { background: #BBF7D0; color: #166534; }
+.badge-broken { background: rgba(255,107,107,0.22); color: #FFB4B4; }
+.badge-ok { background: rgba(111,207,111,0.22); color: #BCEFBC; }
 .chain-arrow { display: flex; align-items: center; justify-content: center; padding: 0 5px; flex-shrink: 0; color: var(--text-light); font-size: 16px; align-self: center; }
 .chain-note { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); line-height: 1.65; }
 .chain-note strong { color: var(--red); }
@@ -87,29 +129,29 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
 @media (max-width:680px) { .two-col { grid-template-columns: 1fr; } }
 
-.map-wrap { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 20px; box-shadow: var(--shadow-sm); position: relative; }
+.map-wrap { padding: 20px; position: relative; }
 .map-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
 .map-header-title { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
 .map-view-toggle { display: flex; gap: 4px; }
 .mvt-btn { padding: 4px 10px; font-family: var(--font); font-size: 11px; font-weight: 500; border-radius: 5px; border: 1px solid var(--border-md); background: var(--surface-2); color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
-.mvt-btn.active { background: var(--red); color: #fff; border-color: var(--red); }
+.mvt-btn.active { background: var(--red); color: var(--black); border-color: var(--red); }
 .map-svg-wrap { position: relative; width: 100%; }
 #indiaMap { width: 100%; display: block; }
 .map-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; font-size: 11px; font-weight: 500; color: var(--text-muted); }
 .leg-item { display: flex; align-items: center; gap: 5px; }
 .leg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.map-tooltip { position: absolute; background: var(--surface); border: 1px solid var(--border-md); border-radius: var(--radius); padding: 12px 14px; font-size: 12px; pointer-events: none; display: none; z-index: 20; max-width: 230px; box-shadow: var(--shadow); }
+.map-tooltip { position: absolute; background: #1A1A1A; border: 1px solid var(--border-md); border-radius: var(--radius); padding: 12px 14px; font-size: 12px; pointer-events: none; display: none; z-index: 20; max-width: 230px; box-shadow: var(--shadow); }
 .tt-title { font-weight: 700; font-size: 13px; margin-bottom: 3px; color: var(--text); }
 .tt-deaths { color: var(--red); font-weight: 700; font-size: 13px; }
 .tt-sub { color: var(--text-muted); font-size: 11px; margin-top: 4px; line-height: 1.45; }
 .tt-cta { color: var(--blue); font-weight: 600; font-size: 10.5px; margin-top: 6px; }
 
 .patterns-stack { display: flex; flex-direction: column; gap: 10px; }
-.pattern-card { background: var(--surface); border-radius: 0 var(--radius) var(--radius) 0; border: 1px solid var(--border); border-left: 4px solid var(--red); padding: 14px 16px; box-shadow: var(--shadow-sm); }
+.pattern-card { padding: 14px 16px; box-shadow: inset 4px 0 0 0 var(--red), var(--shadow); }
 .pattern-num { font-family: var(--font-tight); font-size: clamp(22px,4vw,30px); font-weight: 800; line-height: 1; margin-bottom: 5px; letter-spacing: -0.5px; }
 .pattern-text { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
 
-.chart-card { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: clamp(16px,2.5vw,22px); box-shadow: var(--shadow-sm); }
+.chart-card { padding: clamp(16px,2.5vw,22px); }
 .card-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 14px; }
 .chart-wrap { position: relative; width: 100%; height: 240px; }
 .chart-wrap.tall { height: 320px; }
@@ -117,78 +159,84 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .acc-row { margin-bottom: 14px; }
 .acc-label { display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 500; margin-bottom: 5px; color: var(--text); }
 .acc-pct { font-weight: 700; }
-.acc-track { height: 7px; background: #EEECE8; border-radius: 4px; overflow: hidden; }
+.acc-track { height: 7px; background: #262626; border-radius: 4px; overflow: hidden; }
 .acc-fill { height: 100%; border-radius: 4px; }
 .acc-note { font-size: 11px; color: var(--text-muted); margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); line-height: 1.6; }
 
-.inst-section { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: clamp(18px,3vw,24px); box-shadow: var(--shadow-sm); }
+.inst-section { padding: clamp(18px,3vw,24px); }
 .inst-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 .inst-name { font-size: 12px; font-weight: 500; color: var(--text); flex: 0 0 220px; line-height: 1.35; }
-.inst-track { flex: 1; height: 20px; background: #EEECE8; border-radius: 4px; overflow: hidden; }
+.inst-track { flex: 1; height: 20px; background: #262626; border-radius: 4px; overflow: hidden; }
 .inst-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; justify-content: flex-end; padding-right: 7px; min-width: 50px; }
-.inst-fill span { font-size: 10px; font-weight: 700; color: #fff; white-space: nowrap; }
+.inst-fill span { font-size: 10px; font-weight: 700; color: rgba(0,0,0,0.78); white-space: nowrap; }
 .inst-note { font-size: 11px; color: var(--text-muted); margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); line-height: 1.65; }
 .inst-note strong { color: var(--text); font-weight: 600; }
 .inst-role { font-size: 10.5px; color: var(--text-light); margin: -6px 0 10px 232px; line-height: 1.35; }
 @media (max-width:600px) { .inst-name { flex-basis: 100%; } .inst-row { flex-direction: column; align-items: flex-start; gap: 4px; } .inst-track { width: 100%; } .inst-role { margin-left: 0; } }
 
-.reform-banner { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: clamp(20px,3vw,28px); box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: clamp(20px,4vw,32px); flex-wrap: wrap; }
+.reform-banner { padding: clamp(20px,3vw,28px); display: flex; align-items: center; gap: clamp(20px,4vw,32px); flex-wrap: wrap; }
 .reform-num { font-family: var(--font-tight); font-size: clamp(48px,9vw,72px); font-weight: 800; color: var(--green); line-height: 1; letter-spacing: -2px; flex-shrink: 0; }
 .reform-text { flex: 1; min-width: 240px; }
 .reform-text h3 { font-family: var(--font-tight); font-size: 16px; font-weight: 700; margin-bottom: 6px; }
 .reform-text p { font-size: 12.5px; color: var(--text-muted); line-height: 1.6; }
 
 .questions-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 12px; }
-.question-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 14px 16px; box-shadow: var(--shadow-sm); }
+.question-card { padding: 14px 16px; }
 .question-num { font-family: var(--font-tight); font-size: 22px; font-weight: 800; color: var(--purple); line-height: 1; margin-bottom: 6px; }
 .question-title { font-size: 13px; font-weight: 600; margin-bottom: 5px; line-height: 1.35; }
 .question-text { font-size: 12px; color: var(--text-muted); line-height: 1.55; }
 
 .filter-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
-.ftab { padding: 5px 13px; border-radius: 20px; font-family: var(--font); font-size: 12px; font-weight: 500; border: 1px solid var(--border-md); background: var(--surface); color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+.ftab { padding: 5px 13px; border-radius: 20px; font-family: var(--font); font-size: 12px; font-weight: 500; border: 1px solid var(--border-md); background: rgba(255,255,255,0.06); color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
 .ftab:hover { border-color: var(--red); color: var(--red); }
-.ftab.active { background: var(--red); color: #fff; border-color: var(--red); }
+.ftab.active { background: var(--red); color: var(--black); border-color: var(--red); }
 
 .incident-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(300px,1fr)); gap: 12px; }
-.inc-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 14px 16px; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; box-shadow: var(--shadow-sm); scroll-margin-top: 90px; }
-.inc-card:hover { border-color: var(--red-mid); box-shadow: var(--shadow); }
-.inc-card.highlight { border-color: var(--red); box-shadow: 0 0 0 3px rgba(163,45,45,0.12); }
+.inc-card { padding: 14px 16px; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; scroll-margin-top: 90px; }
+.inc-card:hover { border-color: var(--red-mid); }
+.inc-card.highlight { border-color: var(--red); box-shadow: 0 0 0 3px rgba(255,107,107,0.20); }
 .inc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .inc-name { font-size: 13px; font-weight: 600; line-height: 1.35; flex: 1; color: var(--text); }
 .inc-deaths { font-family: var(--font-tight); font-size: 22px; font-weight: 800; color: var(--red); white-space: nowrap; letter-spacing: -0.5px; }
 .inc-meta { font-size: 11px; color: var(--text-muted); margin-top: 6px; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
 .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; letter-spacing: 0.2px; }
-.badge-warn { background: #FEE2E2; color: #991B1B; }
-.badge-nowarn { background: #D1FAE5; color: #065F46; }
-.badge-unk { background: #F3F4F6; color: #6B7280; }
-.badge-pending { background: #FEF3C7; color: #92400E; }
-.badge-repeat { background: #FCE7F3; color: #9D174D; }
+.badge-warn { background: rgba(255,107,107,0.20); color: #FFC2C2; }
+.badge-nowarn { background: rgba(111,207,111,0.20); color: #BCEFBC; }
+.badge-unk { background: rgba(255,255,255,0.08); color: #B8B4AC; }
+.badge-pending { background: rgba(245,166,35,0.22); color: #FFD9A0; }
+.badge-repeat { background: rgba(244,114,160,0.20); color: #FAC2DA; }
 .cat-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
 .inc-detail { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); line-height: 1.65; }
 .inc-detail strong { color: var(--text); font-weight: 600; }
 .inc-detail .det-row { margin-bottom: 6px; }
 .inc-card.open .inc-detail { display: block; }
 .source-links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-.source-link { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--blue); background: #EFF6FF; padding: 4px 10px; border-radius: 6px; text-decoration: none; transition: background 0.15s; }
-.source-link:hover { background: #DBEAFE; }
+.source-link { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--blue); background: rgba(91,155,217,0.16); padding: 4px 10px; border-radius: 6px; text-decoration: none; transition: background 0.15s; }
+.source-link:hover { background: rgba(91,155,217,0.28); }
 .source-link.unknown { color: var(--text-muted); background: var(--surface-2); cursor: default; }
 
-.footer { margin-top: 48px; padding: 24px 0 36px; border-top: 1px solid var(--border-md); font-size: 11.5px; color: var(--text-muted); line-height: 1.7; }
-.footer a { color: var(--red); text-decoration: none; }
+.footer { margin-top: 48px; padding: 32px 0 40px; border-top: none; font-size: 11.5px; color: var(--text-muted); line-height: 1.7; }
+.footer::before { content:''; display:block; width:48px; height:3px; background: var(--yellow); margin: 0 0 20px; }
+.footer a { color: var(--yellow); text-decoration: none; }
 .footer a:hover { text-decoration: underline; }
 .footer strong { color: var(--text); }
 
 .loading-state { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
-.error-state { background: #FEF2F2; border: 1px solid #FECACA; border-radius: var(--radius); padding: 16px 20px; color: #991B1B; font-size: 13px; line-height: 1.6; margin: 20px 0; }
-.error-state code { background: #FEE2E2; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 11px; }
+.error-state { background: rgba(255,107,107,0.12); border: 1px solid rgba(255,107,107,0.35); border-radius: var(--radius); padding: 16px 20px; color: #FFC2C2; font-size: 13px; line-height: 1.6; margin: 20px 0; }
+.error-state code { background: rgba(255,107,107,0.18); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 11px; }
 </style>
 </head>
 <body>
 
+<div id="scrollProgress" aria-hidden="true"></div>
+
 <div class="header">
   <div class="header-inner">
     <div class="header-eyebrow">India Safety Dashboard — Based on Open Source Data</div>
-    <h1>India Urban Safety Failures<br>2016 – 2026</h1>
+    <h1 class="kinetic-heading" id="dashHeading" aria-label="India Urban Safety Failures 2016 – 2026">
+      <span class="kinetic-line" id="dashHeadingLine1"></span><br>
+      <span class="kinetic-line" id="dashHeadingLine2"></span>
+    </h1>
     <div class="header-sub">A data-driven look at governance failure patterns across 77 fatal public safety incidents in urban India, drawn from documented news reports, government inquiries, and court records.</div>
     <div class="data-status loading" id="dataStatus"><div class="dot"></div><span id="dataStatusText">Loading data from Google Sheets…</span></div>
   </div>
@@ -196,19 +244,19 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 
 <div class="container" id="mainContainer" style="display:none;">
 
-  <div class="section">
+  <div class="section reveal-section">
     <div class="section-title">Overview</div>
     <div class="stats-grid">
-      <div class="stat-card"><div class="stat-num" id="statDeaths">—</div><div class="stat-label">Deaths recorded</div></div>
-      <div class="stat-card"><div class="stat-num" id="statIncidents">—</div><div class="stat-label">Incidents documented (2016–2026)</div></div>
-      <div class="stat-card"><div class="stat-num amber" id="statWarning">—</div><div class="stat-label">Had documented prior warning</div></div>
-      <div class="stat-card"><div class="stat-num green" id="statConvictions">—</div><div class="stat-label">Convictions recorded in any incident</div></div>
+      <div class="stat-card glass-panel"><div class="stat-num" id="statDeaths">—</div><div class="stat-label">Deaths recorded</div></div>
+      <div class="stat-card glass-panel"><div class="stat-num" id="statIncidents">—</div><div class="stat-label">Incidents documented (2016–2026)</div></div>
+      <div class="stat-card glass-panel"><div class="stat-num amber" id="statWarning">—</div><div class="stat-label">Had documented prior warning</div></div>
+      <div class="stat-card glass-panel"><div class="stat-num green" id="statConvictions">—</div><div class="stat-label">Convictions recorded in any incident</div></div>
     </div>
   </div>
 
-  <div class="section">
+  <div class="section reveal-section">
     <div class="section-title">Most important pattern</div>
-    <div class="hero-enforcement">
+    <div class="hero-enforcement glass-panel">
       <div class="hero-top">
         <div class="hero-pct" id="heroPct">—</div>
         <div class="hero-text-block">
@@ -225,10 +273,10 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
     </div>
   </div>
 
-  <div class="section">
+  <div class="section reveal-section">
     <div class="section-title">Where the system breaks down</div>
     <div class="section-desc">Each incident was assessed against the regulatory chain that should have prevented it. The pattern is consistent: the first link — issuing a licence or approval — functions. Everything downstream breaks down.</div>
-    <div class="chain-section">
+    <div class="chain-section glass-panel">
       <div class="chain-label">The licensing → inspection → enforcement chain — and where it fails</div>
       <div class="chain-flow">
         <div class="chain-step"><div class="chain-step-inner ok">
@@ -270,11 +318,11 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
     </div>
   </div>
 
-  <div class="section">
+  <div class="section reveal-section">
     <div class="section-title">Geographic spread — click any bubble to view incident details</div>
     <div class="section-desc">City-level bubbles are sized by death toll and colored by category. Click any bubble to jump to its full record below, including original source links.</div>
     <div class="two-col">
-      <div class="map-wrap">
+      <div class="map-wrap glass-panel">
         <div class="map-header">
           <div class="map-header-title">Incidents by location · click bubble for details</div>
           <div class="map-view-toggle">
@@ -297,53 +345,53 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
     </div>
   </div>
 
-  <div class="section">
+  <div class="section reveal-section">
     <div class="section-title">Incident categories — what fails, and at what cost</div>
     <div class="section-desc">Crowd management failures account for the highest number of incidents and the highest death toll. Fires follow despite fewer incidents. Public Infrastructure Failure ranks high on deaths from a single incident — the Morbi bridge collapse.</div>
     <div class="two-col">
-      <div class="chart-card">
+      <div class="chart-card glass-panel">
         <div class="card-label">Incidents by category</div>
         <div class="chart-wrap tall"><canvas id="catIncidentsChart" role="img" aria-label="Horizontal bar chart of incident categories by number of incidents">Incidents by category, computed from live data.</canvas></div>
       </div>
-      <div class="chart-card">
+      <div class="chart-card glass-panel">
         <div class="card-label">Deaths by category</div>
         <div class="chart-wrap tall"><canvas id="catDeathsChart" role="img" aria-label="Horizontal bar chart of incident categories by total deaths">Deaths by category, computed from live data.</canvas></div>
       </div>
     </div>
   </div>
 
-  <div class="section">
+  <div class="section reveal-section">
     <div class="section-title">A decade of fatal failures</div>
     <div class="section-desc">Incidents (bars) and deaths (line) per year, 2016–2026. The 2025 spike reflects improved documentation coverage for recent events; 2026 data is partial.</div>
-    <div class="chart-card">
+    <div class="chart-card glass-panel">
       <div class="chart-wrap tall"><canvas id="yearChart" role="img" aria-label="Combination chart showing incidents and deaths per year from 2016 to 2026">Incidents and deaths per year, computed from live data.</canvas></div>
     </div>
   </div>
 
-  <div class="section">
+  <div class="section reveal-section">
     <div class="section-title">Governance failure patterns across all incidents</div>
     <div class="section-desc">Each incident in the source dataset was assessed against documented governance failure types. Institutional negligence is present in every recorded incident. Enforcement and inspection failure co-occur at high rates, pointing to a systemic gap between regulatory requirements and their implementation. <strong>Note: this chart reflects the published Janaagraha aggregate findings (26-category coding) and is not independently re-derived from the live incident sheet.</strong></div>
-    <div class="chart-card">
+    <div class="chart-card glass-panel">
       <div class="chart-wrap tall"><canvas id="govFailureChart" role="img" aria-label="Horizontal bar chart showing percentage of incidents where each governance failure type was documented">Governance failure prevalence across incidents.</canvas></div>
     </div>
   </div>
 
-  <div class="section">
+  <div class="section reveal-section">
     <div class="section-title">Preventability — how avoidable were these failures?</div>
     <div class="section-desc">Each incident was rated 1–5 based on the availability of regulatory mechanisms, prior knowledge of risk, and documented governance failures. No incident in this dataset is rated below 3.</div>
-    <div class="chart-card">
+    <div class="chart-card glass-panel">
       <div class="chart-wrap"><canvas id="preventChart" role="img" aria-label="Bar chart showing the count of incidents by preventability rating, 3 to 5">Preventability rating distribution.</canvas></div>
     </div>
   </div>
 
-  <div class="section">
+  <div class="section reveal-section">
     <div class="section-title">Accountability outcomes — what happens after an incident</div>
     <div class="section-desc">Computed live from the incident sheet. The pattern: an FIR is filed, an inquiry is ordered, arrests follow, compensation is announced — consistently. What rarely follows is a court finding, and no incident in the dataset has a recorded conviction.</div>
     <div class="two-col">
-      <div class="chart-card">
+      <div class="chart-card glass-panel">
         <div class="chart-wrap tall"><canvas id="accChart" role="img" aria-label="Horizontal bar chart of accountability outcomes from FIR filed through to conviction">Accountability funnel, computed from live data.</canvas></div>
       </div>
-      <div class="chart-card">
+      <div class="chart-card glass-panel">
         <div class="card-label">Reading the funnel</div>
         <div id="accBars"></div>
         <div class="acc-note" id="accNote"></div>
@@ -351,19 +399,19 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
     </div>
   </div>
 
-  <div class="section">
+  <div class="section reveal-section">
     <div class="section-title">Who failed — institutions appearing most often</div>
     <div class="section-desc">Computed live from the "Primary Responsible Institution" field across all incidents. One institution appears far more often than any other.</div>
-    <div class="inst-section">
+    <div class="inst-section glass-panel">
       <div class="card-label">Top institutions by number of incidents as primary responsible body</div>
       <div id="instBars"></div>
       <div class="inst-note" id="instNote"></div>
     </div>
   </div>
 
-  <div class="section">
+  <div class="section reveal-section">
     <div class="section-title">The reform record — systemic change after disaster</div>
-    <div class="reform-banner">
+    <div class="reform-banner glass-panel">
       <div class="reform-num" id="reformNum">—</div>
       <div class="reform-text">
         <h3>incident out of 77 produced documented systemic reform</h3>
@@ -372,20 +420,20 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
     </div>
   </div>
 
-  <div class="section">
+  <div class="section reveal-section">
     <div class="section-title">Key questions for policy and reform</div>
     <div class="section-desc">These patterns point to questions for city administrators, regulators, and policymakers — framed as questions, not recommendations, because the appropriate response depends on institutional context.</div>
     <div class="questions-grid">
-      <div class="question-card"><div class="question-num">1</div><div class="question-title">Why does enforcement not follow inspection?</div><div class="question-text">Inspection and enforcement failures co-occur across incident types. Are inspections conducted, are findings recorded, and do findings trigger action?</div></div>
-      <div class="question-card"><div class="question-num">2</div><div class="question-title">What explains BMC's concentration of incidents?</div><div class="question-text">10 incidents in one municipal body, all at high preventability, over a decade. Does this reflect scale, documentation quality, or institutional design?</div></div>
-      <div class="question-card"><div class="question-num">3</div><div class="question-title">What happens to warnings?</div><div class="question-text">Prior warnings were documented in roughly half of incidents. What processes exist for recording, escalating, and acting on risk signals — and where do they break?</div></div>
-      <div class="question-card"><div class="question-num">4</div><div class="question-title">What does the accountability process produce?</div><div class="question-text">Zero convictions across a decade of fatal incidents raises questions about the gap between inquiry and adjudication.</div></div>
-      <div class="question-card"><div class="question-num">5</div><div class="question-title">Which regulatory functions are under-resourced?</div><div class="question-text">Inspection and enforcement failures span fire safety, industrial safety, building standards, and crowd management — suggesting capacity constraints that cut across departments.</div></div>
-      <div class="question-card"><div class="question-num">6</div><div class="question-title">What conditions produced the one reform?</div><div class="question-text">Understanding what made reform possible in the New Delhi Railway Station case — and absent in the other 76 — is directly relevant to designing better accountability mechanisms.</div></div>
+      <div class="question-card glass-panel"><div class="question-num">1</div><div class="question-title">Why does enforcement not follow inspection?</div><div class="question-text">Inspection and enforcement failures co-occur across incident types. Are inspections conducted, are findings recorded, and do findings trigger action?</div></div>
+      <div class="question-card glass-panel"><div class="question-num">2</div><div class="question-title">What explains BMC's concentration of incidents?</div><div class="question-text">10 incidents in one municipal body, all at high preventability, over a decade. Does this reflect scale, documentation quality, or institutional design?</div></div>
+      <div class="question-card glass-panel"><div class="question-num">3</div><div class="question-title">What happens to warnings?</div><div class="question-text">Prior warnings were documented in roughly half of incidents. What processes exist for recording, escalating, and acting on risk signals — and where do they break?</div></div>
+      <div class="question-card glass-panel"><div class="question-num">4</div><div class="question-title">What does the accountability process produce?</div><div class="question-text">Zero convictions across a decade of fatal incidents raises questions about the gap between inquiry and adjudication.</div></div>
+      <div class="question-card glass-panel"><div class="question-num">5</div><div class="question-title">Which regulatory functions are under-resourced?</div><div class="question-text">Inspection and enforcement failures span fire safety, industrial safety, building standards, and crowd management — suggesting capacity constraints that cut across departments.</div></div>
+      <div class="question-card glass-panel"><div class="question-num">6</div><div class="question-title">What conditions produced the one reform?</div><div class="question-text">Understanding what made reform possible in the New Delhi Railway Station case — and absent in the other 76 — is directly relevant to designing better accountability mechanisms.</div></div>
     </div>
   </div>
 
-  <div class="section">
+  <div class="section reveal-section">
     <div class="section-title">Browse all incidents</div>
     <div class="filter-bar" id="catFilters"></div>
     <div class="incident-grid" id="incidentList"></div>
@@ -437,20 +485,22 @@ let mapView = 'city';
 let catIncChart = null, catDeathChart = null, yearChart = null, govChart = null, preventChart = null, accChart = null;
 
 const catColors = {
-  'Crowd Management / Stampede': '#E24B4A',
-  'Fire': '#B06A10',
-  'Industrial Accident': '#1557A0',
-  'Building Collapse': '#A32D2D',
-  'Transport Infrastructure Failure': '#2E5E0E',
-  'Hospital Safety Failure': '#46409E',
-  'Public Infrastructure Failure': '#7C2D12',
-  'Flooding / Waterlogging Related Failure': '#0E7490',
-  'Amusement / Recreation Safety Failure': '#9D174D',
-  'School / Institutional Safety Failure': '#854D0E',
-  'Electrical Safety Failure': '#4D7C0F',
-  'Other': '#5A5955'
+  'Crowd Management / Stampede': '#FF6B6B',
+  'Fire': '#F5A623',
+  'Industrial Accident': '#5B9BD9',
+  'Building Collapse': '#FF5252',
+  'Transport Infrastructure Failure': '#6FCF6F',
+  'Hospital Safety Failure': '#9F97E8',
+  'Public Infrastructure Failure': '#E8845C',
+  'Flooding / Waterlogging Related Failure': '#3FC4DD',
+  'Amusement / Recreation Safety Failure': '#F472A0',
+  'School / Institutional Safety Failure': '#D9A441',
+  'Electrical Safety Failure': '#9FD957',
+  'Other': '#9A9890'
 };
-function catColor(c){ return catColors[c] || '#5A5955'; }
+function catColor(c){ return catColors[c] || '#9A9890'; }
+const CHART_AXIS_MUTED = '#8A8782';
+const CHART_AXIS_LABEL = '#D9D6CE';
 
 /* ============================================================
    DATA LOADING
@@ -582,6 +632,64 @@ function showError(html) {
 function isYes(v) { return String(v).trim().toLowerCase() === 'yes'; }
 
 /* ============================================================
+   MOTION — kinetic heading, scroll-progress bar, reveal-on-scroll
+   ============================================================ */
+function buildKineticText(el, text) {
+  el.innerHTML = '';
+  const words = text.split(' ');
+  words.forEach((word, i) => {
+    const mask = document.createElement('span');
+    mask.className = 'word-mask';
+    const span = document.createElement('span');
+    span.className = 'word';
+    span.style.transitionDelay = `${i * 55}ms`;
+    span.textContent = word;
+    mask.appendChild(span);
+    el.appendChild(mask);
+    if (i < words.length - 1) el.appendChild(document.createTextNode(' '));
+  });
+}
+
+function initKineticHeading() {
+  const heading = document.getElementById('dashHeading');
+  const line1 = document.getElementById('dashHeadingLine1');
+  const line2 = document.getElementById('dashHeadingLine2');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduceMotion) {
+    line1.textContent = 'India Urban Safety Failures';
+    line2.textContent = '2016 – 2026';
+    return;
+  }
+  buildKineticText(line1, 'India Urban Safety Failures');
+  buildKineticText(line2, '2016 – 2026');
+  requestAnimationFrame(() => heading.classList.add('is-visible'));
+}
+
+function startScrollProgress() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const bar = document.getElementById('scrollProgress');
+  const tick = () => {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = (max > 0 ? (window.scrollY / max) * 100 : 0) + '%';
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+function observeReveals() {
+  const targets = document.querySelectorAll('.reveal-section');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.15 });
+  targets.forEach((t) => observer.observe(t));
+}
+
+/* ============================================================
    MAIN RENDER
    ============================================================ */
 function renderAll() {
@@ -599,6 +707,7 @@ function renderAll() {
   renderReform();
   renderFilters();
   renderIncidents();
+  observeReveals();
 }
 
 function renderStats() {
@@ -669,11 +778,11 @@ function matchStateName(topoName) {
 }
 
 function getStateColor(deaths) {
-  if (deaths > 300) return '#A32D2D';
-  if (deaths > 150) return '#E24B4A';
-  if (deaths > 50) return '#F09595';
-  if (deaths > 0) return '#FCEBEB';
-  return '#E8E6DF';
+  if (deaths > 300) return '#FF5252';
+  if (deaths > 150) return '#FF6B6B';
+  if (deaths > 50) return '#F0A8A8';
+  if (deaths > 0) return 'rgba(255,107,107,0.18)';
+  return '#2A2A2A';
 }
 
 function setMapView(view, btn) {
@@ -723,20 +832,20 @@ function renderMap() {
       .attr('d', pathGen)
       .attr('fill', d => {
         const key = matchStateName(d.properties.name || '');
-        return key ? getStateColor(stateAgg[key].deaths) : '#E8E6DF';
+        return key ? getStateColor(stateAgg[key].deaths) : '#2A2A2A';
       })
-      .attr('stroke','#fff').attr('stroke-width', 0.7)
+      .attr('stroke','rgba(255,255,255,0.25)').attr('stroke-width', 0.7)
       .style('cursor', mapView === 'state' ? 'pointer' : 'default')
       .on('mouseover', function(event, d) {
         const key = matchStateName(d.properties.name || '');
         if (!key || mapView !== 'state') return;
         const sd = stateAgg[key];
         showTT(event, key, sd.deaths.toLocaleString() + ' deaths', sd.count + ' incidents', false);
-        d3.select(this).attr('stroke','#A32D2D').attr('stroke-width', 2);
+        d3.select(this).attr('stroke','#FF6B6B').attr('stroke-width', 2);
       })
       .on('mouseout', function() {
         hideTT();
-        d3.select(this).attr('stroke','#fff').attr('stroke-width', 0.7);
+        d3.select(this).attr('stroke','rgba(255,255,255,0.25)').attr('stroke-width', 0.7);
       });
 
     if (mapView === 'state') {
@@ -748,7 +857,7 @@ function renderMap() {
           const r = Math.max(5, Math.min(18, Math.sqrt(sd.deaths)*1.1));
           svgSel.append('circle').attr('class','state-circle')
             .attr('cx',x).attr('cy',y).attr('r',r)
-            .attr('fill','rgba(163,45,45,0.15)').attr('stroke','#A32D2D').attr('stroke-width',1)
+            .attr('fill','rgba(255,107,107,0.18)').attr('stroke','#FF6B6B').attr('stroke-width',1)
             .style('pointer-events','none');
         }
       });
@@ -761,12 +870,12 @@ function renderMap() {
         const g = svgSel.append('g').attr('class','city-dot-g').style('cursor','pointer');
         g.append('circle')
           .attr('cx',x).attr('cy',y).attr('r',r+3)
-          .attr('fill', isYes(inc.repeat_offender) ? 'rgba(251,191,36,0.2)' : 'rgba(163,45,45,0.1)')
+          .attr('fill', isYes(inc.repeat_offender) ? 'rgba(245,166,35,0.22)' : 'rgba(255,107,107,0.12)')
           .attr('stroke','none');
         g.append('circle')
           .attr('cx',x).attr('cy',y).attr('r',r)
           .attr('fill', catColor(inc.category))
-          .attr('stroke', isYes(inc.repeat_offender) ? '#D97706' : '#fff')
+          .attr('stroke', isYes(inc.repeat_offender) ? '#F5A623' : 'rgba(255,255,255,0.3)')
           .attr('stroke-width', isYes(inc.repeat_offender) ? 2 : 1);
         g.on('mouseover', function(event) {
             showTT(event, inc.incident_name, inc.deaths + ' deaths · ' + inc.year,
@@ -792,14 +901,14 @@ function renderMapLegend() {
   const legend = document.getElementById('mapLegend');
   if (mapView === 'state') {
     legend.innerHTML = `
-      <div class="leg-item"><div class="leg-dot" style="background:#FCEBEB;border:1px solid #ddd"></div><span>1–50 deaths</span></div>
-      <div class="leg-item"><div class="leg-dot" style="background:#F09595"></div><span>51–150</span></div>
-      <div class="leg-item"><div class="leg-dot" style="background:#E24B4A"></div><span>151–300</span></div>
-      <div class="leg-item"><div class="leg-dot" style="background:#A32D2D"></div><span>300+</span></div>`;
+      <div class="leg-item"><div class="leg-dot" style="background:rgba(255,107,107,0.18);border:1px solid rgba(255,255,255,0.25)"></div><span>1–50 deaths</span></div>
+      <div class="leg-item"><div class="leg-dot" style="background:#F0A8A8"></div><span>51–150</span></div>
+      <div class="leg-item"><div class="leg-dot" style="background:#FF6B6B"></div><span>151–300</span></div>
+      <div class="leg-item"><div class="leg-dot" style="background:#FF5252"></div><span>300+</span></div>`;
   } else {
     const cats = [...new Set(INCIDENTS.map(i => i.category))];
     legend.innerHTML = cats.map(c => `<div class="leg-item"><div class="leg-dot" style="background:${catColor(c)}"></div><span>${c}</span></div>`).join('')
-      + `<div class="leg-item"><div class="leg-dot" style="background:#FCD34D;border:2px solid #D97706"></div><span>Repeat-offender site</span></div>`;
+      + `<div class="leg-item"><div class="leg-dot" style="background:#F5A623;border:2px solid #D9871A"></div><span>Repeat-offender site</span></div>`;
   }
 }
 
@@ -838,20 +947,20 @@ function renderPatterns() {
   const stack = document.getElementById('patternsStack');
   stack.innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
-      <div class="pattern-card" style="border-left-color:#B06A10">
-        <div class="pattern-num" style="color:#B06A10">${firePct}%</div>
+      <div class="pattern-card glass-panel" style="box-shadow:inset 4px 0 0 0 #F5A623, var(--shadow)">
+        <div class="pattern-num" style="color:#F5A623">${firePct}%</div>
         <div class="pattern-text">of fire-related incidents involved no Fire NOC, illegal construction, or unauthorised occupancy</div>
       </div>
-      <div class="pattern-card" style="border-left-color:#1557A0">
-        <div class="pattern-num" style="color:#1557A0">${stampedeDeaths.toLocaleString()}</div>
+      <div class="pattern-card glass-panel" style="box-shadow:inset 4px 0 0 0 #5B9BD9, var(--shadow)">
+        <div class="pattern-num" style="color:#5B9BD9">${stampedeDeaths.toLocaleString()}</div>
         <div class="pattern-text">deaths from crowd management / stampede incidents — the single largest category by death toll</div>
       </div>
-      <div class="pattern-card" style="border-left-color:#2E5E0E">
-        <div class="pattern-num" style="color:#2E5E0E">${repeatCities}+</div>
+      <div class="pattern-card glass-panel" style="box-shadow:inset 4px 0 0 0 #6FCF6F, var(--shadow)">
+        <div class="pattern-num" style="color:#6FCF6F">${repeatCities}+</div>
         <div class="pattern-text">cities with 3 or more documented incidents — repeat sites of governance failure</div>
       </div>
-      <div class="pattern-card" style="border-left-color:#46409E">
-        <div class="pattern-num" style="color:#46409E;font-size:18px;padding-top:4px">${courtPct}% reach court</div>
+      <div class="pattern-card glass-panel" style="box-shadow:inset 4px 0 0 0 #9F97E8, var(--shadow)">
+        <div class="pattern-num" style="color:#9F97E8;font-size:18px;padding-top:4px">${courtPct}% reach court</div>
         <div class="pattern-text">${courtFindings} of ${total} incidents have a recorded court finding — accountability stalls well before adjudication</div>
       </div>
     </div>`;
@@ -876,8 +985,8 @@ function renderCategoryCharts() {
     data:{ labels: sortedByCount.map(e=>e[0]), datasets:[{ data: sortedByCount.map(e=>e[1].count), backgroundColor: sortedByCount.map(e=>catColor(e[0])), borderWidth:0, borderRadius:4 }]},
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}, tooltip:{callbacks:{label: ctx => ' ' + ctx.parsed.x + ' incidents'}}},
-      scales:{ x:{grid:{display:false}, ticks:{color:'#9CA3AF', font:{size:11,family:'Inter'}}},
-               y:{grid:{display:false}, ticks:{color:'#374151', font:{size:10,family:'Inter'}, autoSkip:false}}}}
+      scales:{ x:{grid:{display:false}, ticks:{color:CHART_AXIS_MUTED, font:{size:11,family:'Inter'}}},
+               y:{grid:{display:false}, ticks:{color:CHART_AXIS_LABEL, font:{size:10,family:'Inter'}, autoSkip:false}}}}
   });
 
   if (catDeathChart) catDeathChart.destroy();
@@ -886,8 +995,8 @@ function renderCategoryCharts() {
     data:{ labels: sortedByDeaths.map(e=>e[0]), datasets:[{ data: sortedByDeaths.map(e=>e[1].deaths), backgroundColor: sortedByDeaths.map(e=>catColor(e[0])), borderWidth:0, borderRadius:4 }]},
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}, tooltip:{callbacks:{label: ctx => ' ' + ctx.parsed.x + ' deaths'}}},
-      scales:{ x:{grid:{display:false}, ticks:{color:'#9CA3AF', font:{size:11,family:'Inter'}}},
-               y:{grid:{display:false}, ticks:{color:'#374151', font:{size:10,family:'Inter'}, autoSkip:false}}}}
+      scales:{ x:{grid:{display:false}, ticks:{color:CHART_AXIS_MUTED, font:{size:11,family:'Inter'}}},
+               y:{grid:{display:false}, ticks:{color:CHART_AXIS_LABEL, font:{size:10,family:'Inter'}, autoSkip:false}}}}
   });
 }
 
@@ -904,16 +1013,16 @@ function renderYearChart() {
     data:{
       labels: years,
       datasets:[
-        { type:'bar', label:'Incidents', data: counts, backgroundColor:'#185FA5', borderRadius:4, yAxisID:'y' },
-        { type:'line', label:'Deaths', data: deaths, borderColor:'#E24B4A', backgroundColor:'#E24B4A', tension:0.3, yAxisID:'y1', pointRadius:4, pointBackgroundColor:'#E24B4A' }
+        { type:'bar', label:'Incidents', data: counts, backgroundColor:'#5B9BD9', borderRadius:4, yAxisID:'y' },
+        { type:'line', label:'Deaths', data: deaths, borderColor:'#FF6B6B', backgroundColor:'#FF6B6B', tension:0.3, yAxisID:'y1', pointRadius:4, pointBackgroundColor:'#FF6B6B' }
       ]
     },
     options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{display:true, position:'top', labels:{usePointStyle:true, font:{family:'Inter',size:11}}}},
+      plugins:{legend:{display:true, position:'top', labels:{usePointStyle:true, color:CHART_AXIS_LABEL, font:{family:'Inter',size:11}}}},
       scales:{
-        x:{grid:{display:false}, ticks:{font:{family:'Inter',size:11}}},
-        y:{position:'left', title:{display:true,text:'Incidents',font:{family:'Inter',size:11}}, grid:{display:false}, ticks:{font:{family:'Inter',size:10}}},
-        y1:{position:'right', title:{display:true,text:'Deaths',font:{family:'Inter',size:11}}, grid:{display:false}, ticks:{font:{family:'Inter',size:10}}}
+        x:{grid:{display:false}, ticks:{color:CHART_AXIS_MUTED, font:{family:'Inter',size:11}}},
+        y:{position:'left', title:{display:true,text:'Incidents',color:CHART_AXIS_LABEL,font:{family:'Inter',size:11}}, grid:{display:false}, ticks:{color:CHART_AXIS_MUTED, font:{family:'Inter',size:10}}},
+        y1:{position:'right', title:{display:true,text:'Deaths',color:CHART_AXIS_LABEL,font:{family:'Inter',size:11}}, grid:{display:false}, ticks:{color:CHART_AXIS_MUTED, font:{family:'Inter',size:10}}}
       }}
   });
 }
@@ -936,7 +1045,7 @@ function renderGovFailureChart() {
     {label:'Infrastructure Failure', pct:18},
     {label:'Illegal Construction', pct:17}
   ];
-  const colors = data.map(d => d.pct === 100 ? '#A32D2D' : d.pct >= 60 ? '#1E3A8A' : d.pct >= 40 ? '#1557A0' : '#9CA3AF');
+  const colors = data.map(d => d.pct === 100 ? '#FF5252' : d.pct >= 60 ? '#3B6FB0' : d.pct >= 40 ? '#5B9BD9' : '#8A8782');
 
   if (govChart) govChart.destroy();
   govChart = new Chart(document.getElementById('govFailureChart'), {
@@ -944,8 +1053,8 @@ function renderGovFailureChart() {
     data:{ labels: data.map(d=>d.label), datasets:[{ data: data.map(d=>d.pct), backgroundColor: colors, borderWidth:0, borderRadius:4 }]},
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}, tooltip:{callbacks:{label: ctx => ' ' + ctx.parsed.x + '% of incidents'}}},
-      scales:{ x:{min:0,max:100, grid:{display:false}, ticks:{color:'#9CA3AF', font:{size:11,family:'Inter'}, callback:v=>v+'%'}},
-               y:{grid:{display:false}, ticks:{color:'#374151', font:{size:10.5,family:'Inter'}, autoSkip:false}}}}
+      scales:{ x:{min:0,max:100, grid:{display:false}, ticks:{color:CHART_AXIS_MUTED, font:{size:11,family:'Inter'}, callback:v=>v+'%'}},
+               y:{grid:{display:false}, ticks:{color:CHART_AXIS_LABEL, font:{size:10.5,family:'Inter'}, autoSkip:false}}}}
   });
 }
 
@@ -963,11 +1072,11 @@ function renderPreventChart() {
   if (preventChart) preventChart.destroy();
   preventChart = new Chart(document.getElementById('preventChart'), {
     type:'bar',
-    data:{ labels, datasets:[{ data: vals, backgroundColor:['#9FE1CB','#5DCAA5','#0F6E56'], borderRadius:6 }]},
+    data:{ labels, datasets:[{ data: vals, backgroundColor:['#6FCF6F','#3FC4DD','#5B9BD9'], borderRadius:6 }]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}, tooltip:{callbacks:{label: ctx => ` ${ctx.parsed.y} incidents (${pcts[ctx.dataIndex]}%)`}}},
-      scales:{ x:{grid:{display:false}, ticks:{font:{family:'Inter',size:12}}},
-               y:{grid:{display:false}, ticks:{font:{family:'Inter',size:11}}, title:{display:true,text:'Number of incidents',font:{family:'Inter',size:11}}}}}
+      scales:{ x:{grid:{display:false}, ticks:{color:CHART_AXIS_MUTED, font:{family:'Inter',size:12}}},
+               y:{grid:{display:false}, ticks:{color:CHART_AXIS_MUTED, font:{family:'Inter',size:11}}, title:{display:true,text:'Number of incidents',color:CHART_AXIS_LABEL,font:{family:'Inter',size:11}}}}}
   });
 }
 
@@ -985,12 +1094,12 @@ function renderAccountability() {
   const reform = 1;
 
   const items = [
-    {label:'FIR / Inquiry Filed', val: fir, color:'#1557A0'},
-    {label:'Arrests Made', val: arrests, color:'#B06A10'},
-    {label:'Compensation Announced', val: compensation, color:'#2E5E0E'},
-    {label:'Court Finding', val: courtFinding, color:'#E24B4A'},
-    {label:'Conviction Recorded', val: conviction, color:'#A32D2D'},
-    {label:'Systemic Reform', val: reform, color:'#46409E'}
+    {label:'FIR / Inquiry Filed', val: fir, color:'#5B9BD9'},
+    {label:'Arrests Made', val: arrests, color:'#F5A623'},
+    {label:'Compensation Announced', val: compensation, color:'#6FCF6F'},
+    {label:'Court Finding', val: courtFinding, color:'#FF6B6B'},
+    {label:'Conviction Recorded', val: conviction, color:'#FF5252'},
+    {label:'Systemic Reform', val: reform, color:'#9F97E8'}
   ];
 
   if (accChart) accChart.destroy();
@@ -999,8 +1108,8 @@ function renderAccountability() {
     data:{ labels: items.map(i=>i.label), datasets:[{ data: items.map(i=>i.val), backgroundColor: items.map(i=>i.color), borderRadius:4 }]},
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}, tooltip:{callbacks:{label: ctx => ` ${ctx.parsed.x} of ${total} incidents`}}},
-      scales:{ x:{min:0,max:total, grid:{display:false}, ticks:{color:'#9CA3AF', font:{size:11,family:'Inter'}}},
-               y:{grid:{display:false}, ticks:{color:'#374151', font:{size:11,family:'Inter'}, autoSkip:false}}}}
+      scales:{ x:{min:0,max:total, grid:{display:false}, ticks:{color:CHART_AXIS_MUTED, font:{size:11,family:'Inter'}}},
+               y:{grid:{display:false}, ticks:{color:CHART_AXIS_LABEL, font:{size:11,family:'Inter'}, autoSkip:false}}}}
   });
 
   document.getElementById('accBars').innerHTML = items.map(i => {
@@ -1030,7 +1139,7 @@ function renderInstitutions() {
   });
   const sorted = Object.entries(agg).sort((a,b)=>b[1].count-a[1].count).slice(0,8);
   const max = sorted[0][1].count;
-  const colors = ['#A32D2D','#B06A10','#E24B4A','#2E5E0E','#1557A0','#46409E','#5A5955','#9D174D'];
+  const colors = ['#FF5252','#F5A623','#FF6B6B','#6FCF6F','#5B9BD9','#9F97E8','#9A9890','#F472A0'];
 
   document.getElementById('instBars').innerHTML = sorted.map(([name, sd], idx) => `
     <div class="inst-row">
@@ -1093,7 +1202,7 @@ function renderIncidents() {
     const src1 = inc.source_1 ? `<a class="source-link" href="${inc.source_1}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Source 1 ↗</a>` : `<span class="source-link unknown">Source 1: Unknown</span>`;
     const src2 = inc.source_2 ? `<a class="source-link" href="${inc.source_2}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Source 2 ↗</a>` : `<span class="source-link unknown">Source 2: Unknown</span>`;
 
-    return `<div class="inc-card" id="inc-${idx}" onclick="this.classList.toggle('open')">
+    return `<div class="inc-card glass-panel" id="inc-${idx}" onclick="this.classList.toggle('open')">
       <div class="inc-top">
         <div class="inc-name">${inc.incident_name}</div>
         <div class="inc-deaths">${inc.deaths}</div>
@@ -1122,6 +1231,8 @@ function renderIncidents() {
 /* ============================================================
    INIT
    ============================================================ */
+initKineticHeading();
+startScrollProgress();
 loadData();
 </script>
 </body>

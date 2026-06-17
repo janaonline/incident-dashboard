@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node _verify2.js)",
+      "Bash(find / -iname \"_verify2.js\" 2>/dev/null)",
+      "Read(//d//**)",
+      "Bash(pkill -f \"http.server 8731\")",
+      "Bash(rm -rf /tmp/pw_verify /c/tmp/pw_verify /tmp/dash_full.png /c/tmp/dash_*.png)"
+    ],
+    "additionalDirectories": [
+      "C:\\tmp\\pw_verify"
+    ]
+  }
+}
