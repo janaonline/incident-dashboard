@@ -115,17 +115,87 @@ placeholder box with the filename instead of crashing). Keep that pattern
 when adding new fields — a missing or malformed `content.json` field should
 never throw or break the page.
 
+## Light/dark theme toggle
+
+A persistent light/dark toggle exists (`#themeToggle` in `index.html`),
+driven by a `data-theme="dark"|"light"` attribute on `<html>` and persisted to
+`localStorage` under the shared key `isd-theme` (same key used by
+`dashboard/index.html` — Part 2 — so the choice syncs across both pages on one
+origin via the `storage` event; default is `dark` when nothing is saved). A
+blocking inline script is the first child of `<head>`, before the stylesheet
+link, so the correct theme applies before first paint (no flash of the wrong
+theme). The toggle ripples in via the View Transitions API
+(`document.startViewTransition`, `switchTheme()` in `script.js`), clipping an
+expanding circle from the icon over 1000ms — this is the only approach that
+ripples correctly over the full-bleed photo backgrounds rather than wiping a
+flat color over them. It degrades to an instant swap (no ripple, no
+crossfade) in browsers without the View Transitions API and under
+`prefers-reduced-motion: reduce`.
+
+**The black/yellow/cream-only palette rule below is intentionally relaxed for
+light mode** (owner-approved) — `--black`/`--charcoal`/`--yellow`/`--cream`
+are theme-scoped in `style.css` (`[data-theme="dark"]` keeps today's exact
+values; `[data-theme="light"]` swaps in a full light palette). In light mode
+`--yellow` resolves to a contrast-safe deep amber (`#b8860b`) for text/chrome,
+since the bright brand yellow fails contrast as text on a light background.
+The hero CTA button is the one place that must *not* follow that flip: it's a
+bright-yellow fill with dark text in both themes, so it uses two
+theme-invariant tokens instead, `--yellow-fill` (always `#f5c400`) and
+`--ink-on-fill` (always `#1c1b18`) — don't repoint it at `--yellow`/`--black`
+or it inherits the theme flip and the text contrast breaks in light mode.
+
+`applyTintFromImage()` (script.js) is theme-aware: it stores each panel's
+sampled hue/saturation in `data-tint-h`/`data-tint-s` instead of only using
+them once, and derives `--tint-r/g/b` at a lightness of `0.32` in dark mode or
+`0.85` in light mode (`tintLightness()`). `reapplyTints()` re-derives every
+stored panel's tint at the new lightness and is called on toggle and on the
+cross-tab `storage` sync — necessary because the tint is set as an inline
+style, which would otherwise permanently pin the dark-mode tint regardless of
+`[data-theme]`.
+
+The photo scrims (`.content-section__scrim`, `.hero__overlay`) scale via a
+`--scrim-strength` custom property (`0.92` dark, `0.55` light) rather than
+going transparent in light mode — text sits directly on photos with no other
+backing, so a real scrim is still needed for legibility even with dark ink
+text in light mode.
+
+`.content-section__caption` (the small uppercase label under each section's
+body text, e.g. "Interactive incident map") needed its own light-mode
+override, `#2e2b26` — a muted mid-gray (`#5a554c`) was tried first but tested
+too low-contrast against the glass panel, since the panel's actual rendered
+color is a blur of whatever photo sits behind it (unpredictable, can be
+bright) rather than a flat surface. Don't reintroduce a lighter caption color
+on the assumption the panel is a fixed light tone — verify against a real
+screenshot, not just the panel's nominal tint value.
+
+`.hero__title` and `.content-section__heading` also needed a light-mode
+override, for the same underlying reason: `var(--yellow)` in light mode is
+`#b8860b` (amber), which sits in a contrast deadzone against the glass panel
+— the panel's actual rendered brightness is dominated by the real, blurred
+photo behind it (`backdrop-filter`), only lightly tinted at low alpha, so it
+varies with the photo and amber isn't reliably dark or light enough against
+it either way. Both selectors get
+`[data-theme="light"] { color: var(--cream); }` instead — reusing the same
+dark-ink color already proven legible for body text in this same panel
+context, rather than introducing a new color. `.content-section__kicker`
+(decorative accent bar, not text) and `.content-section__index` (the faint
+"01"/"02" numeral, which sits outside the glass-panel directly over the
+photo, not inside a card) deliberately keep `var(--yellow)` — this fix is
+scoped to text actually inside a `.glass-panel`. Dark mode is untouched.
+
 ## Design constraints (do not relax without asking)
 
 - Palette: black, yellow, and one cream/off-white only (see CSS variables
-  `--black`, `--yellow`, `--cream` in `style.css`). No new colors, **with
-  one documented exception**: the `.glass-panel` text panels (see below)
+  `--black`, `--yellow`, `--cream` in `style.css`) **in dark mode** — see
+  "Light/dark theme toggle" above for the approved light-mode exception. No
+  new colors beyond the two theme palettes, **with one further documented
+  exception**: the `.glass-panel` text panels (see below)
   intentionally pick up a dynamic tint sampled from their own photo —
   the user explicitly asked for this "liquid glass" treatment, overriding
   the fixed-palette rule for that one mechanism only. Chrome elements
   (kicker bar, section numeral, scroll-progress bar, footer rule, link
-  hover) and body-text color stay fixed yellow/cream regardless — don't
-  let the dynamic tint creep into anything outside `.glass-panel`.
+  hover) and body-text color stay fixed yellow/cream (per-theme) regardless —
+  don't let the dynamic tint creep into anything outside `.glass-panel`.
 - Fonts: exactly two Google Fonts — Playfair Display (display/headlines)
   and Inter (body) — loaded via `<link>` tags in `index.html`. No
   additional typefaces, no local font files.
@@ -360,9 +430,12 @@ Each section of the page has a dedicated function. `renderAll()` calls all of th
 
 ## CSS design system
 
-All values are defined as CSS custom properties on `:root`. These were
+All values are defined as CSS custom properties, theme-scoped across
+`:root, [data-theme="dark"]` and `[data-theme="light"]` (see "Light/dark
+theme toggle" below) rather than a single flat `:root` block. These were
 overhauled in the dark-theme redesign (see "Visual redesign" below) — the
-table reflects current values, not the original light red/cream theme.
+table reflects current dark-mode values, not the original light red/cream
+theme; most are overridden in `[data-theme="light"]`.
 
 | Token | Value |
 |---|---|
@@ -384,8 +457,8 @@ table reflects current values, not the original light red/cream theme.
 | `--tint-r` / `--tint-g` / `--tint-b` | `24` / `24` / `24` — default `.glass-panel` tint; `.hero-enforcement` overrides these inline to a reddish tone. Unlike the parent showcase site's `applyTintFromImage()`, nothing here samples color from a photo — there are no photo-backed panels in the dashboard, so the tint is always one of these static values |
 
 Per-category and per-state chart/map colors (`catColors`, `getStateColor()`,
-`CHART_AXIS_MUTED`, `CHART_AXIS_LABEL`) were also retuned for a dark
-background — see "Visual redesign" below.
+`axisColors()`) were also retuned for a dark background — see "Visual
+redesign" and "Light/dark theme toggle" below.
 
 Responsive breakpoints are handled inline with `clamp()` for typography and `@media` queries for layout grid changes (640 px, 680 px, 520 px, 600 px).
 
@@ -425,11 +498,92 @@ in-place inside this file's own `<style>`/`<script>` blocks:
   `transition-delay`.
 - **Chart/map colors:** `catColors`, `getStateColor()`, badge backgrounds,
   and map stroke/fill colors were all re-tuned for contrast against the
-  dark background. Two new constants, `CHART_AXIS_MUTED` (`#8A8782`) and
-  `CHART_AXIS_LABEL` (`#D9D6CE`), replace the hardcoded light-theme tick
-  colors previously passed directly into Chart.js `scales` options.
+  dark background. Chart tick/label colors are resolved via `axisColors()`
+  (see "Light/dark theme toggle" below) rather than fixed constants, since
+  they now need to differ by theme.
 - Both `initKineticHeading()` and `startScrollProgress()` run once at script
   init, before `loadData()` — independent of the data-driven render cycle.
+
+## Light/dark theme toggle
+
+A persistent light/dark toggle exists (`#themeToggle`), driven by
+`data-theme="dark"|"light"` on `<html>` and persisted to `localStorage` under
+the shared key `isd-theme` — the same key the parent showcase site
+(Part 1) uses, so the choice syncs across both pages on one origin via the
+`storage` event; default is `dark` when nothing is saved. A blocking inline
+script is the first child of `<head>`, before any CDN `<script>` tags, so the
+correct theme applies before first paint. The toggle ripples in via the View
+Transitions API (`switchTheme()`), clipping an expanding circle from the icon
+over 1000ms, and degrades to an instant swap in browsers without it and under
+`prefers-reduced-motion: reduce`. This is a separate, duplicated
+implementation from the showcase's — no files are shared between the two
+projects, only the `localStorage` key name.
+
+Theme-scoped tokens live in `:root, [data-theme="dark"]` (today's values,
+unchanged) and a new `[data-theme="light"]` block — including a light
+`--bg-gradient`, light `--text`/`--surface`/`--border` tokens, and
+`--map-stroke`/`--map-nodata`/`--tooltip-bg`/`--tooltip-border`/`--track-bg`
+for the map and tooltip. `--red`/`--amber`/`--blue`/`--green`/`--purple`
+keep the same hex values in both themes — they read fine on light too.
+
+**`.header` is deliberately *not* themed** (explicit owner decision): its dark
+maroon gradient, cream body text, and yellow `<h1>` stay pinned to their
+literal dark-mode hex values in both themes, rather than reading from
+`--cream`/`--yellow`. A dark hero band in an otherwise light UI is a
+deliberate, intentional look — and pinning avoids the same kind of contrast
+break the parent showcase site's hero CTA button would have hit (see Part 1)
+if header text read from the theme-flipped tokens.
+
+**`.hero-enforcement`** (the "Most important pattern" panel) hit the same
+class of bug and needed the same kind of fix: it sets its own fixed dark-red
+`--tint-r/g/b` override and hardcodes `color: #fff` on all its children
+(`.hero-pct`, `.hero-label`, `.hero-headline`, `.hero-desc`, `.hb-num`,
+`.hb-label`) via inheritance — this is intentional, always-on branding, not a
+photo-derived tint. At `.glass-panel`'s normal low alpha (`0.22`–`0.45`), that
+dark-red tint composited against the *light* page background turned the
+panel pale pink, and the hardcoded white text became unreadable.
+`[data-theme="light"] .hero-enforcement` overrides the background to a much
+higher alpha (`0.92`) so the panel stays a solid dark red regardless of page
+background, leaving the dark-mode rule (which already worked) untouched. Any
+future card that pins its own tint + hardcoded text color this way needs the
+same per-theme alpha check — `.glass-panel`'s default alpha assumes the
+tinted color and the page background are compatible in lightness, which only
+holds in dark mode for this panel.
+
+`.glass-panel`'s blur/border/shadow mechanics were tuned to match the parent
+showcase site's `.glass-panel` exactly (`border`/`border-top-color` alpha
+`0.14`/`0.32`, `border-radius: 20px`, `box-shadow: 0 12px 40px
+rgba(0,0,0,0.35)`, a `background-color 0.6s ease` transition, and
+`@supports` blur/saturate/alpha `20px`/`160%`/`0.22`) — by owner request, to
+look like the same "liquid glass" family in both projects. This is visual
+mechanics only: dashboard cards still flip color with the theme exactly as
+before (light cream + dark text in light mode, dark + light text in dark
+mode) — no dynamic per-card photo-sampled tinting was added, since the
+dashboard has no photo backgrounds to sample from and porting that system
+was explicitly ruled out as unnecessary complexity. `border-radius` and
+`box-shadow` are set as literals scoped to this one rule rather than by
+changing the shared `--radius-lg`/`--shadow` tokens, since `--shadow` is
+still used elsewhere (`.map-tooltip`, `.pattern-card`'s inline inset
+shadow) and must keep its own `0.45` alpha there. Known minor cosmetic
+quirk: `.stat-card`/`.question-card` each set their own `transition`
+shorthand (for their scroll-reveal opacity/transform animation), which —
+same CSS specificity, later in source order — silently overrides
+`.glass-panel`'s new `background-color` transition for just those two card
+types; their background still changes correctly on toggle, it just snaps
+instead of fading, which is imperceptible next to the ripple's own motion.
+
+Chart axis/label colors are resolved per-render via `axisColors()` (dark:
+`#8A8782`/`#D9D6CE`, light: `#4a463e`/`#1c1b18`) instead of the old fixed
+`CHART_AXIS_MUTED`/`CHART_AXIS_LABEL` constants. `refreshThemedViews()`
+re-runs the chart/map renderers (guarded by `if (!INCIDENTS.length) return;`)
+on toggle and on the cross-tab `storage` sync — it never touches
+`convictions`, `reform`, the governance-failure percentages, or the
+preventability 3–5 bars. `renderMap()`'s topojson fetch is cached in
+`TOPO_CACHE` (the original fetch body is now a `drawMap(data)` helper) so
+toggling theme doesn't re-hit the CDN; the state-path stroke and no-data fill
+read `var(--map-stroke)`/`var(--map-nodata)` directly so they resolve live
+without needing a redraw, though `refreshThemedViews()` still calls
+`renderMap()` for consistency with the other re-themed charts.
 
 ## Error and loading states
 

@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
+  initThemeToggle();
+
   fetch('content.json')
     .then((response) => response.json())
     .then((data) => {
@@ -14,6 +16,91 @@ document.addEventListener('DOMContentLoaded', () => {
       /* content.json missing or invalid - leave the page blank rather than crash */
     });
 });
+
+const THEME_KEY = 'isd-theme';
+
+function persistTheme(value) {
+  try {
+    localStorage.setItem(THEME_KEY, value);
+  } catch (err) {
+    /* localStorage unavailable (private mode, etc.) - theme just won't persist */
+  }
+}
+
+function tintLightness() {
+  return document.documentElement.getAttribute('data-theme') === 'light' ? 0.85 : 0.32;
+}
+
+function reapplyTints() {
+  document.querySelectorAll('[data-tint-h]').forEach((el) => {
+    const [r, g, b] = hslToRgb(Number(el.dataset.tintH), Number(el.dataset.tintS), tintLightness());
+    el.style.setProperty('--tint-r', Math.round(r));
+    el.style.setProperty('--tint-g', Math.round(g));
+    el.style.setProperty('--tint-b', Math.round(b));
+  });
+}
+
+function switchTheme(next, originEl) {
+  const root = document.documentElement;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (reduce || !document.startViewTransition) {
+    root.setAttribute('data-theme', next);
+    persistTheme(next);
+    reapplyTints();
+    return;
+  }
+
+  const rect = originEl.getBoundingClientRect();
+  const x = rect.left + rect.width / 2;
+  const y = rect.top + rect.height / 2;
+  const endRadius = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+
+  const transition = document.startViewTransition(() => {
+    root.setAttribute('data-theme', next);
+    persistTheme(next);
+    reapplyTints();
+  });
+
+  transition.ready.then(() => {
+    root.animate(
+      {
+        clipPath: [
+          `circle(0px at ${x}px ${y}px)`,
+          `circle(${endRadius}px at ${x}px ${y}px)`,
+        ],
+      },
+      { duration: 1000, easing: 'ease-in-out', pseudoElement: '::view-transition-new(root)' }
+    );
+  });
+}
+
+function initThemeToggle() {
+  const button = document.getElementById('themeToggle');
+  if (!button) return;
+
+  const syncButton = (theme) => {
+    button.setAttribute('aria-pressed', String(theme === 'light'));
+    button.setAttribute('aria-label', theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme');
+  };
+
+  syncButton(document.documentElement.getAttribute('data-theme') || 'dark');
+
+  button.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = current === 'light' ? 'dark' : 'light';
+    syncButton(next);
+    switchTheme(next, button);
+  });
+
+  window.addEventListener('storage', (e) => {
+    if (e.key === THEME_KEY && e.newValue) {
+      document.documentElement.setAttribute('data-theme', e.newValue);
+      syncButton(e.newValue);
+      reapplyTints();
+    }
+  });
+}
 
 function debounce(fn, wait) {
   let timer = null;
@@ -113,7 +200,11 @@ function applyTintFromImage(img, panelEl) {
     b = b / pixelCount;
 
     const [h, s] = rgbToHsl(r, g, b);
-    const [tr, tg, tb] = hslToRgb(h, Math.min(s, 0.65), 0.32);
+    const cappedS = Math.min(s, 0.65);
+    panelEl.dataset.tintH = h;
+    panelEl.dataset.tintS = cappedS;
+
+    const [tr, tg, tb] = hslToRgb(h, cappedS, tintLightness());
 
     panelEl.style.setProperty('--tint-r', Math.round(tr));
     panelEl.style.setProperty('--tint-g', Math.round(tg));
