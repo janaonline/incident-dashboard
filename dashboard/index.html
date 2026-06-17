@@ -766,7 +766,7 @@ function observeReveals() {
         observer.unobserve(entry.target);
       }
     });
-  }, { threshold: 0.15 });
+  }, { threshold: 0 });
   targets.forEach((t) => observer.observe(t));
 }
 
