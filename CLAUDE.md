@@ -374,7 +374,12 @@ Every row from the Google Sheet is normalised to this shape. Field names are mat
 | `media_investigation` | string | |
 | `multiple_reports` | string | |
 | `investigation_status` | string | |
-| `source_1` / `source_2` | string | URLs; rendered as clickable links in incident cards |
+| `sources` | string | Single column, comma-separated URLs (count varies per row, e.g. 5–9); split at render time in `renderIncidents()` into one `.source-link` pill per URL — replaced the old two-column `source_1`/`source_2` layout |
+| `rank` | number | Severity rank by death toll, descending, competition-style (ties share a rank); rendered as a `.badge-rank` badge (e.g. "#1 deadliest") in each incident card's meta row |
+
+The sheet also has a `notes` column (reviewer annotations, e.g. "Self
+Reviewed: <url>") — it is intentionally **not** read by `normalizeRow()`
+and never rendered anywhere on the page.
 
 ## Incident categories and colours
 

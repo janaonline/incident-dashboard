@@ -295,7 +295,10 @@ Data is fetched live from Google Sheets as a CSV export. The sheet must be share
 | `media_investigation` | Whether a media investigation was conducted |
 | `multiple_reports` | Whether multiple independent reports exist |
 | `investigation_status` | Current investigation status |
-| `source_1` / `source_2` | URLs to primary sources |
+| `sources` | Comma-separated list of URLs to primary sources (one column, variable count per row) |
+| `rank` | Severity rank by death toll, descending (competition-style — ties share a rank) |
+
+The sheet also has a `notes` column (reviewer annotations) — it is deliberately never read or rendered by the dashboard.
 
 ### Incident categories
 
