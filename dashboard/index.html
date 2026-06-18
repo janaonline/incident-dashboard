@@ -264,11 +264,13 @@ body { font-family: var(--font); background: var(--bg-gradient); color: var(--te
 .badge-unk { background: rgba(255,255,255,0.08); color: #B8B4AC; }
 .badge-pending { background: rgba(245,166,35,0.22); color: #FFD9A0; }
 .badge-repeat { background: rgba(244,114,160,0.20); color: #FAC2DA; }
+.badge-rank { background: rgba(91,155,217,0.20); color: #BFDCF5; }
 [data-theme="light"] .badge-warn { background: rgba(255,107,107,0.18); color: #B23B3B; }
 [data-theme="light"] .badge-nowarn { background: rgba(111,207,111,0.20); color: #2F6B2F; }
 [data-theme="light"] .badge-unk { background: rgba(0,0,0,0.06); color: #5a554c; }
 [data-theme="light"] .badge-pending { background: rgba(245,166,35,0.22); color: #8a5a0a; }
 [data-theme="light"] .badge-repeat { background: rgba(244,114,160,0.22); color: #9c3865; }
+[data-theme="light"] .badge-rank { background: rgba(91,155,217,0.18); color: #2a5d8a; }
 .cat-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
 .inc-detail { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); line-height: 1.65; }
 .inc-detail strong { color: var(--text); font-weight: 600; }
@@ -542,7 +544,7 @@ body { font-family: var(--font); background: var(--bg-gradient); color: var(--te
       "Anyone with the link", OR the tab name doesn't match
       SHEET_TAB_NAME exactly (case-sensitive, including spaces).
    ============================================================ */
-const GOOGLE_SHEET_ID_OR_URL = "1o3j5JGzCfzakkHF2jUaiPwHyLeNtnFSdY3391KMIj50";
+const GOOGLE_SHEET_ID_OR_URL = "1O8poq7twpSNIh2X8UK6n9ilcc-qDt7hWF6cPxyTfilI";
 const SHEET_TAB_NAME = "Incident Database";
 
 function extractSheetId(input) {
@@ -700,8 +702,8 @@ function normalizeRow(r) {
     media_investigation: str(get('media_investigation')),
     multiple_reports: str(get('multiple_reports')),
     investigation_status: str(get('investigation_status')),
-    source_1: str(get('source_1')),
-    source_2: str(get('source_2'))
+    sources: str(get('sources')),
+    rank: num(get('rank'))
   };
 }
 
@@ -1295,9 +1297,12 @@ function renderIncidents() {
       : '<span class="badge badge-unk">? Warning unknown</span>';
     const repeatBadge = isYes(inc.repeat_offender) ? '<span class="badge badge-repeat">↻ Repeat offender</span>' : '';
     const pendingBadge = (inc.year >= 2025 && !isYes(inc.court_finding)) ? '<span class="badge badge-pending">⏳ Pending</span>' : '';
+    const rankBadge = inc.rank ? `<span class="badge badge-rank">#${inc.rank} deadliest</span>` : '';
 
-    const src1 = inc.source_1 ? `<a class="source-link" href="${inc.source_1}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Source 1 ↗</a>` : `<span class="source-link unknown">Source 1: Unknown</span>`;
-    const src2 = inc.source_2 ? `<a class="source-link" href="${inc.source_2}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Source 2 ↗</a>` : `<span class="source-link unknown">Source 2: Unknown</span>`;
+    const sourceUrls = inc.sources ? inc.sources.split(',').map(s => s.trim()).filter(Boolean) : [];
+    const sourceLinks = sourceUrls.length
+      ? sourceUrls.map((url, i) => `<a class="source-link" href="${url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Source ${i + 1} ↗</a>`).join('')
+      : `<span class="source-link unknown">No sources listed</span>`;
 
     return `<div class="inc-card glass-panel" id="inc-${idx}" onclick="this.classList.toggle('open')">
       <div class="inc-top">
@@ -1306,7 +1311,7 @@ function renderIncidents() {
       </div>
       <div class="inc-meta">
         <span>${inc.city}, ${inc.state} · ${inc.year}</span>
-        ${warnBadge}${repeatBadge}${pendingBadge}
+        ${rankBadge}${warnBadge}${repeatBadge}${pendingBadge}
         <span class="cat-dot" style="background:${catColor(inc.category)}"></span>
       </div>
       <div class="inc-detail">
@@ -1319,7 +1324,7 @@ function renderIncidents() {
         <div class="det-row"><strong>Accountability action:</strong> ${inc.accountability_action || 'Unknown'}</div>
         <div class="det-row"><strong>Investigation status:</strong> ${inc.investigation_status || 'Unknown'}</div>
         <div class="det-row"><strong>Preventability:</strong> ${inc.preventability}/5 &nbsp;|&nbsp; <strong>Injuries:</strong> ${inc.injuries || 'Unknown'}</div>
-        <div class="source-links">${src1}${src2}</div>
+        <div class="source-links">${sourceLinks}</div>
       </div>
     </div>`;
   }).join('');

@@ -20,7 +20,10 @@
       "Bash(powershell -NoProfile -Command \"Get-Process -Id \\(Get-NetTCPConnection -LocalPort 8001 -ErrorAction SilentlyContinue\\).OwningProcess -ErrorAction SilentlyContinue | Stop-Process -Force\")",
       "Bash(taskkill //PID 28896 //F)",
       "Bash(curl -s http://localhost:8000/style.css)",
-      "Bash(curl -s http://localhost:8001/index.html)"
+      "Bash(curl -s http://localhost:8001/index.html)",
+      "PowerShell(Get-Command python, python3, py -ErrorAction SilentlyContinue)",
+      "PowerShell(Set-Location \"d:\\\\projects\\\\ai-website-learning\\\\dashboard\"; Start-Process -FilePath \"python.exe\" -ArgumentList \"-m\",\"http.server\",\"8741\" -WindowStyle Hidden; Start-Sleep -Seconds 2; \\(Invoke-WebRequest -Uri \"http://localhost:8741/index.html\" -UseBasicParsing\\).StatusCode)",
+      "Bash(node verify_sources_rank.js)"
     ],
     "additionalDirectories": [
       "C:\\tmp\\pw_verify",
