@@ -317,7 +317,7 @@ body { font-family: var(--font); background: var(--bg-gradient); color: var(--te
       <span class="kinetic-line" id="dashHeadingLine1"></span><br>
       <span class="kinetic-line" id="dashHeadingLine2"></span>
     </h1>
-    <div class="header-sub">A data-driven look at governance failure patterns across 77 fatal public safety incidents in urban India, drawn from documented news reports, government inquiries, and court records.</div>
+    <div class="header-sub">A data-driven look at governance failure patterns across <span id="totalIncidentsHeader">—</span> fatal public safety incidents in urban India, drawn from documented news reports, government inquiries, and court records.</div>
     <div class="data-status loading" id="dataStatus"><div class="dot"></div><span id="dataStatusText">Loading data from Google Sheets…</span></div>
   </div>
 </div>
@@ -391,7 +391,7 @@ body { font-family: var(--font); background: var(--bg-gradient); color: var(--te
           <div class="chain-step-icon">🏛️</div>
           <div class="chain-step-name">Conviction</div>
           <div class="chain-step-desc">Court process resolves with a finding</div>
-          <span class="chain-badge badge-broken" id="chainConvictionBadge">0 of 77</span>
+          <span class="chain-badge badge-broken" id="chainConvictionBadge">—</span>
         </div></div>
       </div>
       <div class="chain-note" id="chainNote"></div>
@@ -449,14 +449,6 @@ body { font-family: var(--font); background: var(--bg-gradient); color: var(--te
   </div>
 
   <div class="section reveal-section">
-    <div class="section-title">Governance failure patterns across all incidents</div>
-    <div class="section-desc">Each incident in the source dataset was assessed against documented governance failure types. Institutional negligence is present in every recorded incident. Enforcement and inspection failure co-occur at high rates, pointing to a systemic gap between regulatory requirements and their implementation. <strong>Note: this chart reflects the published Janaagraha aggregate findings (26-category coding) and is not independently re-derived from the live incident sheet.</strong></div>
-    <div class="chart-card glass-panel">
-      <div class="chart-wrap tall"><canvas id="govFailureChart" role="img" aria-label="Horizontal bar chart showing percentage of incidents where each governance failure type was documented">Governance failure prevalence across incidents.</canvas></div>
-    </div>
-  </div>
-
-  <div class="section reveal-section">
     <div class="section-title">Preventability — how avoidable were these failures?</div>
     <div class="section-desc">Each incident was rated 1–5 based on the availability of regulatory mechanisms, prior knowledge of risk, and documented governance failures. No incident in this dataset is rated below 3.</div>
     <div class="chart-card glass-panel">
@@ -494,7 +486,7 @@ body { font-family: var(--font); background: var(--bg-gradient); color: var(--te
     <div class="reform-banner glass-panel">
       <div class="reform-num" id="reformNum">—</div>
       <div class="reform-text">
-        <h3>incident out of 77 produced documented systemic reform</h3>
+        <h3>incident out of <span id="totalIncidentsReform">—</span> produced documented systemic reform</h3>
         <p>The New Delhi Railway Station stampede (2025) is the only incident in this dataset for which crowd-control reforms were subsequently announced. In the remaining incidents, the documented response ends at inquiry, compensation, or ongoing investigation. FIRs, inquiries, and compensation are incident-level responses — they are consistently triggered. Regulatory reform is a systems-level response — it is exceptional.</p>
       </div>
     </div>
@@ -505,11 +497,11 @@ body { font-family: var(--font); background: var(--bg-gradient); color: var(--te
     <div class="section-desc">These patterns point to questions for city administrators, regulators, and policymakers — framed as questions, not recommendations, because the appropriate response depends on institutional context.</div>
     <div class="questions-grid">
       <div class="question-card glass-panel"><div class="question-num">1</div><div class="question-title">Why does enforcement not follow inspection?</div><div class="question-text">Inspection and enforcement failures co-occur across incident types. Are inspections conducted, are findings recorded, and do findings trigger action?</div></div>
-      <div class="question-card glass-panel"><div class="question-num">2</div><div class="question-title">What explains BMC's concentration of incidents?</div><div class="question-text">10 incidents in one municipal body, all at high preventability, over a decade. Does this reflect scale, documentation quality, or institutional design?</div></div>
+      <div class="question-card glass-panel"><div class="question-num">2</div><div class="question-title">What explains BMC's concentration of incidents?</div><div class="question-text"><span id="bmcIncidentCount">—</span> incidents in one municipal body, all at high preventability, over a decade. Does this reflect scale, documentation quality, or institutional design?</div></div>
       <div class="question-card glass-panel"><div class="question-num">3</div><div class="question-title">What happens to warnings?</div><div class="question-text">Prior warnings were documented in roughly half of incidents. What processes exist for recording, escalating, and acting on risk signals — and where do they break?</div></div>
-      <div class="question-card glass-panel"><div class="question-num">4</div><div class="question-title">What does the accountability process produce?</div><div class="question-text">Zero convictions across a decade of fatal incidents raises questions about the gap between inquiry and adjudication.</div></div>
+      <div class="question-card glass-panel"><div class="question-num">4</div><div class="question-title">What does the accountability process produce?</div><div class="question-text"><span id="convictionsQuestionText">—</span> convictions across a decade of fatal incidents raises questions about the gap between inquiry and adjudication.</div></div>
       <div class="question-card glass-panel"><div class="question-num">5</div><div class="question-title">Which regulatory functions are under-resourced?</div><div class="question-text">Inspection and enforcement failures span fire safety, industrial safety, building standards, and crowd management — suggesting capacity constraints that cut across departments.</div></div>
-      <div class="question-card glass-panel"><div class="question-num">6</div><div class="question-title">What conditions produced the one reform?</div><div class="question-text">Understanding what made reform possible in the New Delhi Railway Station case — and absent in the other 76 — is directly relevant to designing better accountability mechanisms.</div></div>
+      <div class="question-card glass-panel"><div class="question-num">6</div><div class="question-title">What conditions produced the one reform?</div><div class="question-text">Understanding what made reform possible in the New Delhi Railway Station case — and absent in the other <span id="otherIncidentsCount">—</span> — is directly relevant to designing better accountability mechanisms.</div></div>
     </div>
   </div>
 
@@ -520,7 +512,7 @@ body { font-family: var(--font); background: var(--bg-gradient); color: var(--te
   </div>
 
   <div class="footer">
-    <strong>Data:</strong> 77 incidents compiled from news reports, Wikipedia, government inquiry records, court records, CAG reports, and credible media investigations (2016–2026). This dashboard renders live from a Google Sheet — the spreadsheet is the single source of truth. Source links for every incident are shown in its expanded card.<br><br>
+    <strong>Data:</strong> <span id="totalIncidentsFooter">—</span> incidents compiled from news reports, Wikipedia, government inquiry records, court records, CAG reports, and credible media investigations (2016–2026). This dashboard renders live from a Google Sheet — the spreadsheet is the single source of truth. Source links for every incident are shown in its expanded card.<br><br>
     <strong>Methodology notes:</strong> Some incidents appear as near-duplicate entries reflecting multiple source reports of the same event — all rows are retained as documented in the source dataset. Map coordinates are city-level approximations geocoded from location names, not precise incident-site coordinates. The governance failure prevalence chart (Section "Governance failure patterns") reflects published aggregate findings from the original 26-category coding and is shown as a standalone reference, not re-derived from this sheet.<br><br>
     <strong>Branding:</strong> India Safety Dashboard — Based on Open Source Data &nbsp;|&nbsp; Suggestions &amp; corrections welcome via the source spreadsheet.
   </div>
@@ -562,7 +554,7 @@ let INCIDENTS = [];
 let currentCat = 'All';
 let currentLang = 'en';
 let mapView = 'city';
-let catIncChart = null, catDeathChart = null, yearChart = null, govChart = null, preventChart = null, accChart = null;
+let catIncChart = null, catDeathChart = null, yearChart = null, preventChart = null, accChart = null;
 
 const catColors = {
   'Crowd Management / Stampede': '#FF6B6B',
@@ -714,6 +706,9 @@ function showError(html) {
 
 function isYes(v) { return String(v).trim().toLowerCase() === 'yes'; }
 
+function countConvictions() { return INCIDENTS.filter(i => /convict/i.test(i.accountability_action)).length; }
+function countReform() { return INCIDENTS.filter(i => /reform|policy chang|regulation introduc|rule introduc/i.test(i.accountability_action)).length; }
+
 /* ============================================================
    MOTION — kinetic heading, scroll-progress bar, reveal-on-scroll
    ============================================================ */
@@ -777,13 +772,13 @@ function observeReveals() {
    ============================================================ */
 function renderAll() {
   renderStats();
+  renderNarrativeStats();
   renderHero();
   renderChain();
   renderMap();
   renderPatterns();
   renderCategoryCharts();
   renderYearChart();
-  renderGovFailureChart();
   renderPreventChart();
   renderAccountability();
   renderInstitutions();
@@ -798,12 +793,28 @@ function renderStats() {
   const totalIncidents = INCIDENTS.length;
   const warnCount = INCIDENTS.filter(i => isYes(i.prior_warning)).length;
   const warnPct = Math.round(warnCount / totalIncidents * 100);
-  const convictions = 0;
+  const convictions = countConvictions();
 
   document.getElementById('statDeaths').textContent = totalDeaths.toLocaleString();
   document.getElementById('statIncidents').textContent = totalIncidents;
   document.getElementById('statWarning').textContent = warnPct + '%';
   document.getElementById('statConvictions').textContent = convictions;
+}
+
+function renderNarrativeStats() {
+  const total = INCIDENTS.length;
+  const conviction = countConvictions();
+  const reform = countReform();
+  const bmcCount = INCIDENTS.filter(i =>
+    /bmc|brihanmumbai/i.test(i.primary_institution) || /bmc|brihanmumbai/i.test(i.secondary_institution)
+  ).length;
+
+  document.getElementById('totalIncidentsHeader').textContent = total;
+  document.getElementById('totalIncidentsFooter').textContent = total;
+  document.getElementById('totalIncidentsReform').textContent = total;
+  document.getElementById('otherIncidentsCount').textContent = total - reform;
+  document.getElementById('bmcIncidentCount').textContent = bmcCount;
+  document.getElementById('convictionsQuestionText').textContent = conviction === 0 ? 'Zero' : conviction;
 }
 
 function renderHero() {
@@ -825,6 +836,7 @@ function renderChain() {
   const enforcementFail = INCIDENTS.filter(i => /enforcement/i.test(i.regulatory_function_failed)).length;
   const firFiled = INCIDENTS.filter(i => isYes(i.govt_inquiry)).length;
   const courtFindings = INCIDENTS.filter(i => isYes(i.court_finding)).length;
+  const convictions = countConvictions();
 
   const inspPct = Math.round(inspectionFail/total*100);
   const enfPct = Math.round(enforcementFail/total*100);
@@ -841,7 +853,7 @@ function renderChain() {
     `<strong>Pattern across ${total} incidents:</strong> The first link (licence/approval) functions in nearly every case.
      Inspection failure is documented in ${inspPct}% of incidents and enforcement failure in ${enfPct}%.
      Government inquiries follow in ${firPct}% of cases, but court findings are reached in only ${courtFindings} of ${total} —
-     and zero convictions are recorded across the entire dataset.`;
+     and ${convictions === 0 ? 'zero convictions are' : convictions + ' conviction' + (convictions === 1 ? ' is' : 's are')} recorded across the entire dataset.`;
 }
 
 /* ============================================================
@@ -1124,38 +1136,6 @@ function renderYearChart() {
 }
 
 /* ============================================================
-   GOVERNANCE FAILURE CHART (PDF aggregate, static reference)
-   ============================================================ */
-function renderGovFailureChart() {
-  const ax = axisColors();
-  const data = [
-    {label:'Institutional Negligence', pct:100},
-    {label:'Enforcement Failure', pct:73},
-    {label:'Inspection Failure', pct:69},
-    {label:'Municipal Failure', pct:57},
-    {label:'Prior Warning Ignored', pct:49},
-    {label:'Licensing Failure', pct:47},
-    {label:'Fire Department Failure', pct:31},
-    {label:'Police / Crowd Mgmt Failure', pct:27},
-    {label:'Industrial Safety Failure', pct:21},
-    {label:'Maintenance Failure', pct:21},
-    {label:'Infrastructure Failure', pct:18},
-    {label:'Illegal Construction', pct:17}
-  ];
-  const colors = data.map(d => d.pct === 100 ? '#FF5252' : d.pct >= 60 ? '#3B6FB0' : d.pct >= 40 ? '#5B9BD9' : '#8A8782');
-
-  if (govChart) govChart.destroy();
-  govChart = new Chart(document.getElementById('govFailureChart'), {
-    type:'bar',
-    data:{ labels: data.map(d=>d.label), datasets:[{ data: data.map(d=>d.pct), backgroundColor: colors, borderWidth:0, borderRadius:4 }]},
-    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{display:false}, tooltip:{callbacks:{label: ctx => ' ' + ctx.parsed.x + '% of incidents'}}},
-      scales:{ x:{min:0,max:100, grid:{display:false}, ticks:{color:ax.muted, font:{size:11,family:'Inter'}, callback:v=>v+'%'}},
-               y:{grid:{display:false}, ticks:{color:ax.label, font:{size:10.5,family:'Inter'}, autoSkip:false}}}}
-  });
-}
-
-/* ============================================================
    PREVENTABILITY CHART
    ============================================================ */
 function renderPreventChart() {
@@ -1189,8 +1169,8 @@ function renderAccountability() {
   const arrests = INCIDENTS.filter(i => /arrest/i.test(i.accountability_action)).length;
   const compensation = INCIDENTS.filter(i => /compensat|ex-gratia/i.test(i.accountability_action)).length;
   const courtFinding = INCIDENTS.filter(i => isYes(i.court_finding)).length;
-  const conviction = 0;
-  const reform = 1;
+  const conviction = countConvictions();
+  const reform = countReform();
 
   const items = [
     {label:'FIR / Inquiry Filed', val: fir, color:'#5B9BD9'},
@@ -1221,8 +1201,8 @@ function renderAccountability() {
 
   document.getElementById('accNote').innerHTML =
     `Computed live from the sheet: <strong>${fir} of ${total}</strong> incidents have a government inquiry recorded,
-     <strong>${courtFinding}</strong> reach a court finding, and <strong>zero</strong> have a recorded conviction.
-     Only <strong>1</strong> incident (New Delhi Railway Station stampede) produced a documented systemic reform.`;
+     <strong>${courtFinding}</strong> reach a court finding, and <strong>${conviction === 0 ? 'zero' : conviction}</strong> have a recorded conviction.
+     ${reform === 0 ? 'No incident' : 'Only <strong>' + reform + '</strong> incident' + (reform === 1 ? '' : 's')} produced a documented systemic reform.`;
 }
 
 /* ============================================================
@@ -1253,11 +1233,12 @@ function renderInstitutions() {
   `).join('');
 
   const top = sorted[0];
+  const totalInstitutions = Object.keys(agg).length;
   document.getElementById('instNote').innerHTML =
     `<strong>${top[0]}</strong> is the single most prominent institution in this dataset, appearing as the primary
      responsible body in <strong>${top[1].count} incidents</strong> with a combined death toll of
-     <strong>${top[1].deaths.toLocaleString()}</strong>. Beyond the top institutions, failures are distributed across
-     more than 30 distinct bodies — indicating the problem is widespread across urban local governments, not confined
+     <strong>${top[1].deaths.toLocaleString()}</strong>. Failures are distributed across
+     <strong>${totalInstitutions} distinct bodies</strong> in total — indicating the problem is widespread across urban local governments, not confined
      to a small number of underperforming institutions.`;
 }
 
@@ -1265,7 +1246,7 @@ function renderInstitutions() {
    REFORM
    ============================================================ */
 function renderReform() {
-  document.getElementById('reformNum').textContent = '1';
+  document.getElementById('reformNum').textContent = countReform();
 }
 
 /* ============================================================
@@ -1347,7 +1328,6 @@ function refreshThemedViews() {
   if (!INCIDENTS.length) return;
   renderCategoryCharts();
   renderYearChart();
-  renderGovFailureChart();
   renderPreventChart();
   renderAccountability();
   renderMap();

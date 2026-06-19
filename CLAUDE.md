@@ -301,7 +301,7 @@ Single-file static web application (`index.html`) — a data journalism dashboar
 Everything lives in `index.html`:
 - `<style>` — all CSS, using custom properties
 - `<body>` — static HTML shell with placeholder elements
-- `<script>` — all application logic (~780 lines of vanilla JS)
+- `<script>` — all application logic (~880 lines of vanilla JS)
 
 No bundler. No npm. No dependencies to install. Open in a browser (served over HTTP/HTTPS — not `file://`) and it works.
 
@@ -335,7 +335,7 @@ Google Sheet (CSV export URL)
 | `INCIDENTS` | `Array<Object>` | All loaded incident records after normalisation |
 | `currentCat` | `string` | Active category filter (`'All'` by default) |
 | `mapView` | `'city'` \| `'state'` | Map toggle state |
-| `catIncChart`, `catDeathChart`, `yearChart`, `govChart`, `preventChart`, `accChart` | Chart.js instances | Kept globally so `.destroy()` can be called on re-render |
+| `catIncChart`, `catDeathChart`, `yearChart`, `preventChart`, `accChart` | Chart.js instances | Kept globally so `.destroy()` can be called on re-render |
 
 ## Data schema — `normalizeRow()` output
 
@@ -365,7 +365,7 @@ Every row from the Google Sheet is normalised to this shape. Field names are mat
 | `prior_warning` | string | `'yes'` / `'no'` / other — tested via `isYes()` |
 | `prior_violation` | string | |
 | `repeat_offender` | string | `'yes'` / `'no'` — tested via `isYes()` |
-| `accountability_action` | string | Regex-searched for `arrest`, `compensat`, `ex-gratia` |
+| `accountability_action` | string | Regex-searched for `arrest`, `compensat`, `ex-gratia`, `convict` (via `countConvictions()`), and `reform`/`policy chang`/`regulation introduc`/`rule introduc` (via `countReform()`) |
 | `evidence_strength` | number | |
 | `preventability` | number | 1–5 scale; no incident in dataset is below 3 |
 | `govt_inquiry` | string | `'yes'` / `'no'` — proxied as FIR/inquiry filed |
@@ -406,7 +406,8 @@ Each section of the page has a dedicated function. `renderAll()` calls all of th
 
 | Function | What it renders |
 |---|---|
-| `renderStats()` | Overview stat cards (deaths, incidents, % warned, convictions) |
+| `renderStats()` | Overview stat cards (deaths, incidents, % warned, convictions — convictions computed live via `countConvictions()`) |
+| `renderNarrativeStats()` | Fills in narrative `<span>` numbers scattered across static HTML copy (total incident count in the header/footer/reform section, the "other N incidents" count, the BMC institution count, the convictions question-card wording) — see "Narrative numbers must stay live" below |
 | `renderHero()` | "Most important pattern" hero block with prior-warning breakdown |
 | `renderChain()` | Licence → inspection → enforcement → response → conviction chain |
 | `renderMap()` | D3 SVG map, city bubbles or state choropleth |
@@ -414,14 +415,21 @@ Each section of the page has a dedicated function. `renderAll()` calls all of th
 | `renderPatterns()` | Four pattern cards (fire NOC, stampede deaths, repeat cities, court %) |
 | `renderCategoryCharts()` | Two Chart.js horizontal bar charts (incidents & deaths by category) |
 | `renderYearChart()` | Combo bar+line chart (incidents & deaths per year) |
-| `renderGovFailureChart()` | Static bar chart — 12 governance failure types (hardcoded % from published aggregate) |
 | `renderPreventChart()` | Preventability rating bar chart (ratings 3–5) |
-| `renderAccountability()` | Accountability funnel chart + text bars (FIR → conviction) |
-| `renderInstitutions()` | Top 8 institutions ranked by incident count |
-| `renderReform()` | Reform number (currently hardcoded to `1`) |
+| `renderAccountability()` | Accountability funnel chart + text bars (FIR → conviction → reform), conviction/reform now computed live via `countConvictions()`/`countReform()` |
+| `renderInstitutions()` | Top 8 institutions ranked by incident count; note text also reports the live total distinct-institution count |
+| `renderReform()` | Reform number, computed live via `countReform()` |
 | `renderFilters()` | Category filter tab bar |
 | `renderIncidents()` | Filterable incident card grid |
 | `observeReveals()` | Not a data renderer — re-arms the reveal-on-scroll `IntersectionObserver` for `.reveal-section` elements; called last in `renderAll()` (see "Visual redesign" below) |
+
+There is no `renderGovFailureChart()` any more — the governance-failure
+prevalence chart (12 hardcoded percentages from a separate published
+Janaagraha study) was removed entirely, along with its section, canvas, and
+the `govChart` Chart.js instance variable. It could not be recomputed from
+the live sheet without changing its underlying methodology, so per explicit
+direction it was deleted rather than kept as a non-derivable constant — see
+"Narrative numbers must stay live" below.
 
 ## Map implementation notes
 
@@ -581,9 +589,10 @@ Chart axis/label colors are resolved per-render via `axisColors()` (dark:
 `#8A8782`/`#D9D6CE`, light: `#4a463e`/`#1c1b18`) instead of the old fixed
 `CHART_AXIS_MUTED`/`CHART_AXIS_LABEL` constants. `refreshThemedViews()`
 re-runs the chart/map renderers (guarded by `if (!INCIDENTS.length) return;`)
-on toggle and on the cross-tab `storage` sync — it never touches
-`convictions`, `reform`, the governance-failure percentages, or the
-preventability 3–5 bars. `renderMap()`'s topojson fetch is cached in
+on toggle and on the cross-tab `storage` sync — it doesn't call
+`renderNarrativeStats()` or otherwise touch the narrative-prose numbers,
+since none of them are theme-dependent (re-running `renderAccountability()`
+recomputes the same `convictions`/`reform` values, just re-styled). `renderMap()`'s topojson fetch is cached in
 `TOPO_CACHE` (the original fetch body is now a `drawMap(data)` helper) so
 toggling theme doesn't re-hit the CDN; the state-path stroke and no-data fill
 read `var(--map-stroke)`/`var(--map-nodata)` directly so they resolve live
@@ -625,10 +634,48 @@ const SHEET_TAB_NAME = "Incident Database";  // must match exactly, case-sensiti
 
 **To deploy:** Upload `index.html` to any static host (Vercel, Netlify, GitHub Pages). No build step required.
 
-## Important caveats in the data
+## Narrative numbers must stay live
 
-- The **governance failure prevalence chart** is hardcoded from published Janaagraha aggregate findings (26-category coding). It is **not** re-derived from the live sheet columns. Do not change those percentages without a new published source.
-- `reform` count is hardcoded to `1` in `renderReform()` — reflecting that only the 2025 New Delhi Railway Station stampede produced documented systemic reform.
-- `convictions` is hardcoded to `0` in `renderStats()` — no conviction has been recorded in any incident in the dataset.
+Every number shown on the page — including ones embedded in static prose,
+not just chart/stat-card values — must be computed from `INCIDENTS`, never
+hand-typed as a literal. This was tightened after an audit found several
+numbers quietly drifting from the live sheet:
+
+- `convictions` (`renderStats()`, `renderAccountability()`, `renderChain()`)
+  is computed by `countConvictions()` — `INCIDENTS.filter(i =>
+  /convict/i.test(i.accountability_action)).length`. It currently still
+  evaluates to `0` (no incident has a recorded conviction), but it's now a
+  live computation rather than a typed-in `0`, so it self-corrects if the
+  sheet ever records one. Same pattern as the pre-existing `arrest`/
+  `compensat|ex-gratia` regexes already used in `renderAccountability()`.
+- `reform` (`renderReform()`, `renderAccountability()`) is computed by
+  `countReform()` — regex `/reform|policy chang|regulation introduc|rule
+  introduc/i` against `accountability_action`. Verified against the live
+  sheet to match exactly one row (the 2025 New Delhi Railway Station
+  stampede), so the previously-hardcoded `1` is unchanged in value but is
+  now derived rather than typed in.
+- The **governance failure prevalence chart** (12 categories, "Institutional
+  Negligence" 100% down to "Illegal Construction" 17%) has been **removed
+  entirely** — function, section, canvas, and the `govChart` Chart.js
+  instance variable are all gone. It was sourced from a separate published
+  Janaagraha study using a 26-category coding scheme with no corresponding
+  sheet columns; recomputing similar-looking percentages from the sheet's
+  own `governance_failure` free-text field via different regex logic would
+  have silently presented a different methodology under the same numbers.
+  Per explicit direction, since it couldn't be faithfully derived from the
+  sheet, it was deleted rather than kept as a non-derivable constant. Do not
+  re-add a hardcoded version of this chart.
+- Several **plain-prose numbers** were previously typed directly into
+  static HTML and never updated (e.g. "across 77 fatal incidents" in the
+  header/footer/reform-section copy, "the other 76" in a question card,
+  "more than 30 distinct bodies" in the institutions note, "10 incidents"
+  in the BMC question card). These are now `<span id="...">` placeholders
+  filled in by `renderNarrativeStats()` (called from `renderAll()`) instead
+  of literals — see the function table above. If you add new prose that
+  states a count, percentage, or other fact derivable from `INCIDENTS`,
+  follow this pattern: an `id`-tagged span in the HTML, filled in by a
+  render function, never a typed number. (The audit also surfaced that the
+  sheet currently has **64** rows, not 77 — the old hardcoded copy had
+  already gone stale before this fix.)
 - `preventability` scores in the dataset all fall in the `3–5` range; the chart only shows those three bars. This is a data characteristic, not a display bug.
 - Some incidents appear as near-duplicate rows (same event, multiple source reports) — this is intentional, not a deduplication failure.

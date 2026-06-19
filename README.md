@@ -134,7 +134,7 @@ then visit `http://localhost:8000/`.
 
 # Part 2 — Dashboard app (`dashboard/`)
 
-A data journalism dashboard that documents, visualises, and analyses **77 fatal urban safety incidents in India from 2016 to 2026**. Built by Janaagraha, it draws on news reports, government inquiries, court records, CAG audits, and credible media investigations to surface patterns of governance failure behind preventable deaths.
+A data journalism dashboard that documents, visualises, and analyses **fatal urban safety incidents in India from 2016 to 2026**. Built by Janaagraha, it draws on news reports, government inquiries, court records, CAG audits, and credible media investigations to surface patterns of governance failure behind preventable deaths. The total incident count is fetched live from the data source rather than fixed in the page (currently 64 incidents).
 
 ## What this is
 
@@ -142,7 +142,7 @@ A data journalism dashboard that documents, visualises, and analyses **77 fatal 
 
 This is an interactive web page — one file that you open in a browser — showing a decade of urban safety disasters in India and what they have in common. Click on a city on the map to read about that incident. Filter incidents by type. Expand any card for full details and links to original sources.
 
-The core finding: these are not accidents. Nearly half of all incidents had documented prior warnings — notices issued, buildings flagged as dangerous, approvals denied — that were not acted on. In all 77 incidents, zero convictions have been recorded.
+The core finding: these are not accidents. Nearly half of all incidents had documented prior warnings — notices issued, buildings flagged as dangerous, approvals denied — that were not acted on. Across the full live dataset, zero convictions have been recorded.
 
 ### For technical readers
 
@@ -170,11 +170,11 @@ A visual flow showing the five links in the regulatory chain and where each one 
 
 ```
 Licence / Approval  →  Inspection  →  Enforcement  →  Incident Response  →  Conviction
-(Usually granted)      (Fails in       (Fails in        (FIR/inquiry          (0 of 77
-                        ~most cases)    ~most cases)     common)              incidents)
+(Usually granted)      (Fails in       (Fails in        (FIR/inquiry          (Zero, to
+                        ~most cases)    ~most cases)     common)              date)
 ```
 
-All percentages computed live from the sheet.
+All percentages and counts computed live from the sheet.
 
 ### 4. Geographic map
 An SVG map of India (D3 + TopoJSON) with two views:
@@ -200,23 +200,10 @@ Crowd Management / Stampede leads on both. Fire leads on incidents-per-death-tol
 ### 7. A decade of fatal failures — year chart
 Combination bar + line chart showing incidents (bars) and deaths (line) from 2016 to 2026. The 2025 spike reflects improved documentation coverage for recent events. 2026 data is partial.
 
-### 8. Governance failure patterns — across all incidents
-A horizontal bar chart showing 12 governance failure types and the percentage of incidents where each is documented. This chart reflects **published aggregate findings** from Janaagraha's 26-category coding and is not re-derived from the live incident sheet. Institutional Negligence is documented in 100% of incidents.
-
-Top failure types:
-| Failure type | % of incidents |
-|---|---|
-| Institutional Negligence | 100% |
-| Enforcement Failure | 73% |
-| Inspection Failure | 69% |
-| Municipal Failure | 57% |
-| Prior Warning Ignored | 49% |
-| Licensing Failure | 47% |
-
-### 9. Preventability rating
+### 8. Preventability rating
 Bar chart showing how incidents are distributed across preventability ratings 3, 4, and 5 (on a 1–5 scale). No incident in this dataset is rated below 3 — every incident in the dataset had available regulatory mechanisms that could have prevented it.
 
-### 10. Accountability outcomes — the funnel
+### 9. Accountability outcomes — the funnel
 Horizontal bar chart showing what happens after each type of incident:
 
 | Outcome | Computed from |
@@ -225,18 +212,18 @@ Horizontal bar chart showing what happens after each type of incident:
 | Arrests Made | `accountability_action` contains "arrest" |
 | Compensation Announced | `accountability_action` contains "compensat" or "ex-gratia" |
 | Court Finding | `court_finding = yes` |
-| Conviction Recorded | Hardcoded `0` — no conviction in dataset |
-| Systemic Reform | Hardcoded `1` — only the 2025 New Delhi Railway Station stampede |
+| Conviction Recorded | `accountability_action` contains "convict" (computed live — currently zero matches) |
+| Systemic Reform | `accountability_action` contains "reform"/"policy chang"/"regulation introduc"/"rule introduc" (computed live — currently one match, the 2025 New Delhi Railway Station stampede) |
 
 Pattern: inquiry and compensation are consistently triggered. Court findings are rare. Convictions are absent.
 
-### 11. Top responsible institutions
-Horizontal bar chart of the 8 institutions appearing most often as the primary responsible body across incidents, ranked by incident count with total deaths shown per institution.
+### 10. Top responsible institutions
+Horizontal bar chart of the 8 institutions appearing most often as the primary responsible body across incidents, ranked by incident count with total deaths shown per institution. The note below the chart also reports the live total count of distinct institutions across the full dataset.
 
-### 12. The reform record
-A single-number callout: **1 out of 77 incidents produced documented systemic reform** — the New Delhi Railway Station stampede (2025), which resulted in crowd-control reform announcements. Every other incident's documented response ends at inquiry, compensation, or ongoing investigation.
+### 11. The reform record
+A single-number callout, computed live: how many incidents produced documented systemic reform, out of the total incident count — currently 1 out of the live total (the New Delhi Railway Station stampede, 2025, which resulted in crowd-control reform announcements). Every other incident's documented response ends at inquiry, compensation, or ongoing investigation.
 
-### 13. Key questions for policy and reform
+### 12. Key questions for policy and reform
 Six framed questions for city administrators, regulators, and policymakers:
 1. Why does enforcement not follow inspection?
 2. What explains BMC's concentration of incidents?
@@ -245,8 +232,8 @@ Six framed questions for city administrators, regulators, and policymakers:
 5. Which regulatory functions are under-resourced?
 6. What conditions produced the one reform?
 
-### 14. Browse all incidents
-A filterable card grid with all 77 incidents. Filter tabs include all categories plus a "Repeat Offenders" filter. Each card shows:
+### 13. Browse all incidents
+A filterable card grid with every incident currently in the sheet. Filter tabs include all categories plus a "Repeat Offenders" filter. Each card shows:
 - Incident name and death count
 - City, state, year
 - Prior warning badge (⚠ Prior warning / ✓ No warning / ? Warning unknown)
@@ -334,7 +321,7 @@ The sheet also has a `notes` column (reviewer annotations) — it is deliberatel
 ### Files
 
 ```
-dashboard/index.html  — the entire application (HTML + CSS + JS, ~1240 lines)
+dashboard/index.html  — the entire application (HTML + CSS + JS, ~1410 lines)
 dashboard/package.json
 ```
 
@@ -397,13 +384,19 @@ No build step. No environment variables. No server. The page fetches all data cl
 
 ## Methodology notes
 
-- **Data compilation:** 77 incidents drawn from news reports, Wikipedia, government inquiry records, court records, CAG reports, and credible media investigations (2016–2026).
+- **Data compilation:** Incidents drawn from news reports, Wikipedia, government inquiry records, court records, CAG reports, and credible media investigations (2016–2026). The total count is fetched live from the sheet, not fixed in the page (64 as of this writing).
 - **Near-duplicates:** Some incidents appear as multiple rows reflecting multiple source reports of the same event. All rows are retained as documented in the source dataset.
 - **Map coordinates:** City-level approximations geocoded from location names — not precise incident-site coordinates.
-- **Governance failure chart:** The 12-category prevalence chart reflects published aggregate findings from Janaagraha's original 26-category coding. It is displayed as a standalone reference and is not re-derived from the live sheet.
-- **Convictions:** Hardcoded to zero — no incident in the dataset has a recorded conviction as of the data compilation date.
-- **Reform count:** Hardcoded to 1 — only the 2025 New Delhi Railway Station stampede produced documented systemic reform.
+- **Convictions:** Computed live by matching "convict" in `accountability_action` — currently zero matches, i.e. no incident in the dataset has a recorded conviction.
+- **Reform count:** Computed live by matching reform-related language ("reform"/"policy chang"/"regulation introduc"/"rule introduc") in `accountability_action` — currently one match, the 2025 New Delhi Railway Station stampede.
 - **Preventability floor:** No incident in this dataset is rated below 3 on the 1–5 scale. This is a characteristic of the curated dataset, not a display constraint.
+
+A governance-failure prevalence chart (12 categories sourced from a separate
+published Janaagraha study using a different, 26-category coding scheme) was
+previously shown here as a static reference. It has been removed: its
+percentages had no corresponding columns in this sheet, so it could not be
+recomputed live, and per project policy every number on this page must be
+calculable from the live data source.
 
 ## About
 
