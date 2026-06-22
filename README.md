@@ -33,7 +33,7 @@ now. **Part 1** below is the showcase site at the project root.
   Dashboard") bundled into this project so the CTA/footer link can redirect
   to it locally instead of an external URL. It has its own
   `index.html`/`package.json` and its own unrelated tech stack (Chart.js,
-  D3, TopoJSON, PapaParse, a live Google Sheet fetch) — see **Part 2**
+  D3, PapaParse, a live Google Sheet fetch) — see **Part 2**
   below for that subproject specifically; nothing above in this list
   applies to it. It now uses a dark theme with its own duplicated copy of
   this site's glass-panel/kinetic-heading/scroll-progress treatment, so the
@@ -146,7 +146,7 @@ The core finding: these are not accidents. Nearly half of all incidents had docu
 
 ### For technical readers
 
-A single-file, zero-build static web application. All logic, styles, and markup live in `index.html`. Data is fetched live at page load from a Google Sheet using the CSV export endpoint, parsed with PapaParse, and rendered using Chart.js (charts), D3.js + TopoJSON (India map), and vanilla DOM manipulation (everything else). No server, no bundler, no npm. The UI defaults to a dark, black-background theme with translucent "glass panel" cards, a kinetic word-reveal headline, and a scroll-progress bar — visually matching the showcase site that links to this dashboard, though the two are independent codebases with no shared files. A top-right toggle switches to a light theme (charts, map, and all cards re-color); the choice persists and stays in sync with the showcase site's own toggle.
+A single-file, zero-build static web application. All logic, styles, and markup live in `index.html`. Data is fetched live at page load from a Google Sheet using the CSV export endpoint, parsed with PapaParse, and rendered using Chart.js (charts), D3.js + a vendored local GeoJSON file (India map), and vanilla DOM manipulation (everything else). No server, no bundler, no npm. The UI defaults to a dark, black-background theme with translucent "glass panel" cards, a kinetic word-reveal headline, and a scroll-progress bar — visually matching the showcase site that links to this dashboard, though the two are independent codebases with no shared files. A top-right toggle switches to a light theme (charts, map, and all cards re-color); the choice persists and stays in sync with the showcase site's own toggle.
 
 ## Dashboard sections
 
@@ -177,11 +177,11 @@ Licence / Approval  →  Inspection  →  Enforcement  →  Incident Response  �
 All percentages and counts computed live from the sheet.
 
 ### 4. Geographic map
-An SVG map of India (D3 + TopoJSON) with two views:
+An SVG map of India (D3.js, rendering a vendored local GeoJSON boundary file) with two views:
 - **Cities view:** One bubble per incident, sized by death toll, coloured by incident category. Repeat-offender sites get a gold border. Click any bubble to jump to that incident's full record.
 - **States view:** Choropleth fill by total deaths per state, with summary circles.
 
-Hovering shows a tooltip with incident name, death count, location, and category.
+Hovering shows a tooltip with incident name, death count, location, and category. A small attribution link in the map's bottom-right corner credits the boundary data source (Survey of India, via the `india-geodata` project) and links to it, as required by its CC BY 4.0 license.
 
 ### 5. Pattern cards
 Four summary findings displayed alongside the map:
@@ -310,18 +310,19 @@ The sheet also has a `notes` column (reviewer annotations) — it is deliberatel
 |---|---|
 | Markup & layout | HTML5, CSS custom properties, CSS Grid, `clamp()` for fluid type |
 | Charts | Chart.js 4.4.1 |
-| Map | D3.js 7.8.5 + TopoJSON 3.0.2 |
+| Map | D3.js 7.8.5 |
 | CSV parsing | PapaParse 5.4.1 |
 | Typography | Inter + Inter Tight (body, stat numbers) + Playfair Display (`<h1>` headline) — all Google Fonts |
-| Map geometry | `datamaps` India TopoJSON (fetched from jsDelivr CDN) |
+| Map geometry | `dashboard/india-states.geojson` — vendored locally, not fetched from a CDN (Survey of India boundaries via [yashveeeeeeer/india-geodata](https://github.com/yashveeeeeeer/india-geodata), CC BY 4.0) |
 | Data backend | Google Sheets (CSV export URL) |
 | Build tooling | None |
-| Runtime dependencies | None (CDN only) |
+| Runtime dependencies | None (CDN only, aside from the vendored map file) |
 
 ### Files
 
 ```
-dashboard/index.html  — the entire application (HTML + CSS + JS, ~1410 lines)
+dashboard/index.html         — the entire application (HTML + CSS + JS, ~1410 lines)
+dashboard/india-states.geojson — vendored India state/UT boundary data (see "Map geometry" above)
 dashboard/package.json
 ```
 
@@ -379,7 +380,7 @@ No build step. No environment variables. No server. The page fetches all data cl
 | "Cannot fetch data when opened as a local file" | Opened via `file://` | Run a local HTTP server (see above) |
 | "HTTP 403" or HTML received instead of CSV | Sheet not shared publicly | Share → Anyone with the link → Viewer |
 | "Tab name doesn't match" | Tab is not named `Incident Database` | Rename the tab exactly |
-| Blank map | CDN fetch for `ind.topo.json` failed | Check network; map degrades gracefully with a text message |
+| Blank map | Fetch for `india-states.geojson` failed (e.g. file missing, or served from `file://`) | Confirm the file sits next to `index.html` and the page is served over HTTP; map degrades gracefully with a text message |
 | Chart not updating | Old Chart.js instance not destroyed | Each render function destroys the previous instance before creating a new one |
 
 ## Methodology notes

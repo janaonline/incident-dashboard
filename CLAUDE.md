@@ -82,8 +82,9 @@ schema silently, since the human editor relies on these exact field names.
 `dashboard/` contains the actual, real "India Safety Dashboard" app that
 this showcase site describes and links to — a completely separate,
 unrelated single-file project (own `index.html`/`package.json`, own tech
-stack: Chart.js/D3/TopoJSON/PapaParse via CDN, fetches its incident data
-live from a Google Sheet). It was dropped in verbatim and is intentionally
+stack: Chart.js/D3/PapaParse via CDN plus one vendored local GeoJSON file
+for the India map, fetches its incident data live from a Google Sheet). It
+was dropped in verbatim and is intentionally
 **not** governed by this Part's constraints (palette, fonts,
 content.json-driven rendering, etc.) — those apply only to the showcase
 site at the project root. It originally shipped with its own light
@@ -311,11 +312,55 @@ No bundler. No npm. No dependencies to install. Open in a browser (served over H
 |---|---|---|
 | Chart.js | 4.4.1 | Bar, line, and combo charts |
 | D3.js | 7.8.5 | SVG map rendering and projections |
-| TopoJSON | 3.0.2 | Parsing India state boundary geometry |
 | PapaParse | 5.4.1 | CSV parsing from Google Sheets |
 | Inter / Inter Tight | Google Fonts | Body text, stat numbers, chart labels |
 | Playfair Display | Google Fonts | `<h1>` headline only (`--font-display`) — added in the dark-theme redesign, see "Visual redesign" below |
-| datamaps `ind.topo.json` | 0.5.10 | India map TopoJSON (fetched at runtime) |
+
+The `topojson` library (was `topojson@3.0.2` via CDN) has been removed — the
+map's geometry source is now plain GeoJSON (see "Map geometry data" below),
+so `topojson.feature()` is no longer needed; `drawMap()` reads
+`data.features` directly.
+
+### Map geometry data
+
+India's state/UT boundaries are **vendored locally** as
+`dashboard/india-states.geojson` (~800 KB) rather than fetched from a CDN —
+`renderMap()` calls `d3.json('india-states.geojson')`. This replaced an
+earlier dependency on `datamaps@0.5.10`'s `ind.topo.json` (fetched from
+jsDelivr), which was frozen pre-2019 (before the Jammu & Kashmir
+Reorganisation Act split the state into J&K and Ladakh) and rendered J&K's
+boundary shape visibly distorted compared to reality.
+
+The replacement was derived from the **Survey of India** boundaries dataset
+published by [yashveeeeeeer/india-geodata](https://github.com/yashveeeeeeer/india-geodata)
+(`admin/states` release, `SOI_States.geojsonl.7z`, CC BY 4.0 — attribution
+required). It was downloaded once and put through a one-off local
+preprocessing pass (the script itself isn't checked into this repo) that:
+- Stripped Survey-of-India transliteration diacritics from state/UT names
+  (e.g. `JAMMU AND KASHMĪR` → `Jammu & Kashmir`) and renamed the property
+  key to `name` (the key `drawMap()`/`matchStateName()` already expected).
+- Simplified each polygon's geometry (Douglas-Peucker, ~1 km tolerance) from
+  ~1.4M points down to ~46K — the source shapefile-derived precision is far
+  beyond what a ~500×580 px SVG map needs.
+- **Reversed every ring's winding order.** This is the one a future
+  re-derivation of this file must not skip: the upstream source's rings are
+  wound clockwise (opposite of the GeoJSON/RFC7946 convention). d3-geo's
+  spherical clipping relies on winding direction to tell a polygon's inside
+  from its outside — with it reversed, every single state was being treated
+  as "the whole sphere minus its real shape," which rendered as one giant
+  solid-color rectangle covering the entire map (not a visible-but-wrong
+  shape — a total rendering breakage). This took significant debugging to
+  isolate, since the symptom didn't look like a winding problem at first
+  glance: each path's own `d` attribute looked locally plausible, and a
+  red herring (`d3.geoMercator()`'s default auto-`clipExtent` quirk, which
+  produces a similar-looking but separate artifact when combined with
+  `.center()`) had to be ruled out first. If the upstream dataset is ever
+  re-fetched, re-apply a ring-reversal pass before shipping it.
+
+A small attribution link (`.map-attribution`, bottom-right corner of the
+map graphic, [index.html](dashboard/index.html)) credits this source and
+links to the same repo, per the CC BY 4.0 license's attribution
+requirement.
 
 ### Data flow
 
@@ -433,13 +478,14 @@ direction it was deleted rather than kept as a non-derivable constant — see
 
 ## Map implementation notes
 
-- India state boundaries come from `https://cdn.jsdelivr.net/npm/datamaps@0.5.10/src/js/data/ind.topo.json` fetched at render time.
-- Projection: `d3.geoMercator()` centred at `[82, 22]`, scale `780`.
-- State name matching (`matchStateName()`) does word-by-word fuzzy comparison to tolerate variations like "Jammu & Kashmir" vs TopoJSON's encoding.
+- India state boundaries come from the locally-vendored `dashboard/india-states.geojson` (see "Map geometry data" above) — `drawMap()` reads `data.features` directly (plain GeoJSON, not TopoJSON).
+- Projection: `d3.geoMercator()` centred at `[82, 22]`, scale `780`. No explicit `.clipExtent()` is set — leave it that way; see the ring-winding note above for why a stray `.clipExtent()` was tried and reverted during debugging (it masked the real bug rather than fixing it).
+- State name matching (`matchStateName()`) does word-by-word fuzzy comparison to tolerate variations like "Jammu & Kashmir" vs the GeoJSON source's encoding (already normalized to plain ASCII names during preprocessing, see "Map geometry data" above).
 - City mode: one bubble per incident row, sized by `√deaths × 0.85`, clamped to `[4, 13]` px radius.
 - State mode: choropleth fill by death-count bracket + summary circle at representative lat/lng.
 - Map tooltip is a positioned `div` — not an SVG element — so it can overflow the SVG bounds.
 - Clicking a city bubble calls `jumpToIncident(idx)` which resets filters, re-renders the list, scrolls to the card, and pulses a highlight class for 2.2 s.
+- `.map-attribution` (bottom-right corner of the map graphic, inside `.map-svg-wrap`) is a static, always-visible credit link — not data-driven, not removed/redrawn by `drawMap()` or `refreshThemedViews()`.
 
 ## CSS design system
 
@@ -592,9 +638,9 @@ re-runs the chart/map renderers (guarded by `if (!INCIDENTS.length) return;`)
 on toggle and on the cross-tab `storage` sync — it doesn't call
 `renderNarrativeStats()` or otherwise touch the narrative-prose numbers,
 since none of them are theme-dependent (re-running `renderAccountability()`
-recomputes the same `convictions`/`reform` values, just re-styled). `renderMap()`'s topojson fetch is cached in
+recomputes the same `convictions`/`reform` values, just re-styled). `renderMap()`'s GeoJSON fetch is cached in
 `TOPO_CACHE` (the original fetch body is now a `drawMap(data)` helper) so
-toggling theme doesn't re-hit the CDN; the state-path stroke and no-data fill
+toggling theme doesn't re-fetch `india-states.geojson`; the state-path stroke and no-data fill
 read `var(--map-stroke)`/`var(--map-nodata)` directly so they resolve live
 without needing a redraw, though `refreshThemedViews()` still calls
 `renderMap()` for consistency with the other re-themed charts.
