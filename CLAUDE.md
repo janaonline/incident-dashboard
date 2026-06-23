@@ -725,3 +725,8 @@ numbers quietly drifting from the live sheet:
   already gone stale before this fix.)
 - `preventability` scores in the dataset all fall in the `3–5` range; the chart only shows those three bars. This is a data characteristic, not a display bug.
 - Some incidents appear as near-duplicate rows (same event, multiple source reports) — this is intentional, not a deduplication failure.
+
+Add under a ## UI Verification section in CLAUDE.md\n\nAfter any UI/CSS/theme change, browser-verify the result across all states (light/dark theme, mobile/desktop) before declaring done, and explicitly check contrast/readability.
+Add under a ## Documentation section in CLAUDE.md\n\nAfter modifying code or data parsing, update the corresponding CLAUDE.md and README.md docs to stay in sync.
+Add under a ## Data Sources section in CLAUDE.md\n\nRender dashboard numbers dynamically from the live spreadsheet/CSV source—never hardcode values—and verify against the live data.
+Add under a ## Environment section in CLAUDE.md\n\nThis environment uses PowerShell; provide PowerShell-compatible syntax for shell commands (e.g., $env:VAR='value').
