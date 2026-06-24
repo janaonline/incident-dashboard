@@ -62,7 +62,20 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8731/index.html)",
       "Bash(node verify_remove_questions.js)",
       "Bash(node check_404.js)",
-      "Bash(powershell -Command \"Stop-Process -Id 10568 -Force\")"
+      "Bash(powershell -Command \"Stop-Process -Id 10568 -Force\")",
+      "Bash(node verify-data.js)",
+      "Bash(node verify_rca_fix.js)",
+      "Bash(node test_cachebust.js)",
+      "Bash(node isolate.js)",
+      "Bash(curl -s \"https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js\" -o /d/tmp/papaparse-5.4.1.min.js)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.5.4/papaparse.min.js\")",
+      "Bash(curl -s \"https://api.cdnjs.com/libraries/PapaParse\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://cdn.jsdelivr.net/npm/papaparse@5.5.4/papaparse.min.js\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://unpkg.com/papaparse@5.5.4/papaparse.min.js\")",
+      "Bash(curl -s \"https://cdn.jsdelivr.net/npm/papaparse@5.5.4/papaparse.min.js\" -o /d/tmp/papaparse-5.5.4-jsdelivr.min.js)",
+      "Bash(curl -s \"http://localhost:8000/index.html\" -o /dev/null -w \"index.html: %{http_code}\\\\n\")",
+      "Bash(curl -s -o /dev/null -w \"favicon: %{http_code}\\\\n\" \"http://localhost:8000/favicon.ico\")",
+      "Bash(taskkill //PID 30572 //F)"
     ],
     "additionalDirectories": [
       "C:\\tmp\\pw_verify",

@@ -1,1 +1,9 @@
-{}
+{
+  "private": true,
+  "scripts": {
+    "verify": "node verify-data.js"
+  },
+  "devDependencies": {
+    "papaparse": "5.5.4"
+  }
+}

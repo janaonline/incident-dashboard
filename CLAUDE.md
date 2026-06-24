@@ -312,7 +312,7 @@ No bundler. No npm. No dependencies to install. Open in a browser (served over H
 |---|---|---|
 | Chart.js | 4.4.1 | Bar, line, and combo charts |
 | D3.js | 7.8.5 | SVG map rendering and projections |
-| PapaParse | 5.4.1 | CSV parsing from Google Sheets |
+| PapaParse | 5.5.4 (jsDelivr) | CSV parsing from Google Sheets |
 | Inter / Inter Tight | Google Fonts | Body text, stat numbers, chart labels |
 | Playfair Display | Google Fonts | `<h1>` headline only (`--font-display`) — added in the dark-theme redesign, see "Visual redesign" below |
 
@@ -320,6 +320,26 @@ The `topojson` library (was `topojson@3.0.2` via CDN) has been removed — the
 map's geometry source is now plain GeoJSON (see "Map geometry data" below),
 so `topojson.feature()` is no longer needed; `drawMap()` reads
 `data.features` directly.
+
+**PapaParse is loaded from jsDelivr, not cdnjs — don't move it back.**
+cdnjs's PapaParse mirror is frozen at 5.4.1 (confirmed via its public API:
+`https://api.cdnjs.com/libraries/PapaParse` lists only `5.4.1` as available,
+with no newer assets published). 5.4.1 has a CSV quoted-field parsing bug
+that's live in this exact sheet's export: the header row ends with three
+trailing empty-named columns (`...,"rank","notes","","",""`, a Google Sheet
+hygiene issue — stray blank columns past `notes`), and 5.4.1 throws
+`InvalidQuotes: "Trailing quote on quoted field is malformed"` at that
+boundary and **silently drops the very next data row** (id 1, "Morbi
+suspension bridge collapse", 141 deaths — the single deadliest incident in
+the dataset) rather than erroring loudly. This is what caused a real
+incident: the Overview stat card showed 1,336 deaths / 62 incidents instead
+of the correct 1,477 / 63 for some period, with no console error to flag
+it. 5.5.4 parses the identical bytes with zero errors and the correct row
+count — confirmed by diffing `Papa.parse()` output between the two versions
+against a live fetch of the actual sheet. If PapaParse is ever upgraded
+again, re-run `node dashboard/verify-data.js` against the live sheet and
+compare its output to what the page renders before and after — don't just
+bump the version number on faith.
 
 ### Map geometry data
 
@@ -653,6 +673,20 @@ without needing a redraw, though `refreshThemedViews()` still calls
 - Successful load but render crash: shows the render error with the live incident count so users know data loaded fine.
 - All errors go into `#errorContainer`; the main content is in `#mainContainer` — both start hidden, only one is shown.
 
+## Data freshness — manual refresh
+
+The `.data-status` pill in the header (`#dataStatus`) shows an "Updated
+HH:MM" timestamp (`#dataStatusTime`) and a "↻ Refresh" button
+(`#refreshDataBtn`) next to the live/loading/error dot — both added after a
+real incident where the page's `loadData()` only ever fetches once, on
+initial load, with no way for an already-open tab to know the sheet
+changed. `loadData()` is guarded by a module-level `isLoadingData` flag so
+overlapping clicks can't race; the button disables and spins
+(`.refresh-btn.spinning`) while a fetch is in flight, and the timestamp
+only updates on a *successful* re-fetch (`loadDataInner()`'s success path).
+The button is intentionally pinned to the same un-themed dark-maroon
+`.header` styling described above — don't theme it independently.
+
 ## How to develop
 
 **To run locally:**
@@ -679,6 +713,17 @@ const SHEET_TAB_NAME = "Incident Database";  // must match exactly, case-sensiti
 2. Reference it as `inc.my_field` in render functions.
 
 **To deploy:** Upload `index.html` to any static host (Vercel, Netlify, GitHub Pages). No build step required.
+
+**To verify every number on the page is sheet-derived:** run
+`node dashboard/verify-data.js` (or `npm run verify` from `dashboard/`,
+after `npm install` once — it depends on the `papaparse` npm package,
+pinned to the exact same version as the CDN script tag in `index.html` so
+results can't drift between the two). It fetches the live sheet, replicates
+every render function's aggregation, and prints every number that should
+appear on the page (Overview stats, hero, chain, patterns, accountability
+funnel, category/year/city aggregates) so they can be diffed against the
+live page. Re-run it any time the sheet changes, the render logic changes,
+or the pinned PapaParse version changes.
 
 ## Narrative numbers must stay live
 
