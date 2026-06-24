@@ -27,7 +27,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,700&family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.5.4/papaparse.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root,
@@ -136,7 +136,14 @@ body { font-family: var(--font); background: var(--bg-gradient); color: var(--te
 .data-status .dot { width: 7px; height: 7px; border-radius: 50%; background: #4ADE80; }
 .data-status.loading .dot { background: #FCD34D; animation: pulse 1s infinite; }
 .data-status.error .dot { background: #F87171; }
+.data-status .data-status-time { opacity: 0.65; }
+.data-status .refresh-btn { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; padding: 2px 8px; font-size: 11px; font-family: var(--font); color: #f3efe6; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); border-radius: 14px; cursor: pointer; transition: background 0.15s ease; }
+.data-status .refresh-btn:hover:not(:disabled) { background: rgba(255,255,255,0.22); }
+.data-status .refresh-btn:disabled { opacity: 0.5; cursor: default; }
+.data-status .refresh-btn .refresh-icon { display: inline-block; transition: transform 0.5s ease; }
+.data-status .refresh-btn.spinning .refresh-icon { animation: spin 0.7s linear infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 
 .container { max-width: 1100px; margin: 0 auto; padding: 0 clamp(16px,4vw,32px); }
 .section { padding: clamp(20px,4vw,32px) 0 clamp(8px,2vw,12px); }
@@ -310,7 +317,7 @@ body { font-family: var(--font); background: var(--bg-gradient); color: var(--te
       <span class="kinetic-line" id="dashHeadingLine2"></span>
     </h1>
     <div class="header-sub">A data-driven look at governance failure patterns across <span id="totalIncidentsHeader">—</span> fatal public safety incidents in urban India, drawn from documented news reports, government inquiries, and court records.</div>
-    <div class="data-status loading" id="dataStatus"><div class="dot"></div><span id="dataStatusText">Loading data from Google Sheets…</span></div>
+    <div class="data-status loading" id="dataStatus"><div class="dot"></div><span id="dataStatusText">Loading data from Google Sheets…</span><span class="data-status-time" id="dataStatusTime"></span><button type="button" class="refresh-btn" id="refreshDataBtn" title="Re-fetch the latest data from the Google Sheet" style="display:none"><span class="refresh-icon" aria-hidden="true">↻</span><span id="refreshDataBtnLabel">Refresh</span></button></div>
   </div>
 </div>
 
@@ -491,7 +498,7 @@ body { font-family: var(--font); background: var(--bg-gradient); color: var(--te
 
   <div class="footer">
     <strong>Data:</strong> <span id="totalIncidentsFooter">—</span> incidents compiled from news reports, government inquiry records, court records, CAG reports, and credible media investigations (2016–2026). This dashboard renders live from a Google Sheet — the spreadsheet is the single source of truth. Source links for every incident are shown in its expanded card.<br><br>
-    <strong>Methodology notes:</strong> Some incidents appear as near-duplicate entries reflecting multiple source reports of the same event — all rows are retained as documented in the source dataset. Map coordinates are city-level approximations geocoded from location names, not precise incident-site coordinates. The governance failure prevalence chart (Section "Governance failure patterns") reflects published aggregate findings from the original 26-category coding and is shown as a standalone reference, not re-derived from this sheet.<br><br>
+    <strong>Methodology notes:</strong> Some incidents appear as near-duplicate entries reflecting multiple source reports of the same event — all rows are retained as documented in the source dataset. Map coordinates are city-level approximations geocoded from location names, not precise incident-site coordinates.<br><br>
     <strong>Branding:</strong> India Safety Dashboard — Based on Open Source Data &nbsp;|&nbsp; Suggestions &amp; corrections welcome via the source spreadsheet.
   </div>
 </div>
@@ -558,10 +565,29 @@ function axisColors() {
 /* ============================================================
    DATA LOADING
    ============================================================ */
+let isLoadingData = false;
+
 async function loadData() {
+  if (isLoadingData) return;
+  isLoadingData = true;
+
   const statusEl = document.getElementById('dataStatus');
   const statusText = document.getElementById('dataStatusText');
+  const statusTime = document.getElementById('dataStatusTime');
+  const refreshBtn = document.getElementById('refreshDataBtn');
+  refreshBtn.disabled = true;
+  refreshBtn.classList.add('spinning');
 
+  try {
+    await loadDataInner(statusEl, statusText, statusTime, refreshBtn);
+  } finally {
+    isLoadingData = false;
+    refreshBtn.disabled = false;
+    refreshBtn.classList.remove('spinning');
+  }
+}
+
+async function loadDataInner(statusEl, statusText, statusTime, refreshBtn) {
   if (location.protocol === 'file:') {
     statusEl.classList.remove('loading');
     statusEl.classList.add('error');
@@ -601,8 +627,10 @@ async function loadData() {
     INCIDENTS = parsed.data.map(r => normalizeRow(r)).filter(r => r.incident_name);
     if (INCIDENTS.length === 0) throw new Error('Parsed 0 valid incident rows — check column headers match expected names (incident_name, deaths, year, etc.)');
 
-    statusEl.classList.remove('loading');
+    statusEl.classList.remove('loading', 'error');
     statusText.textContent = `Live data — ${INCIDENTS.length} incidents loaded from Google Sheets`;
+    statusTime.textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    refreshBtn.style.display = '';
     document.getElementById('mainContainer').style.display = '';
     document.getElementById('errorContainer').style.display = 'none';
 
@@ -619,6 +647,7 @@ async function loadData() {
     statusEl.classList.remove('loading');
     statusEl.classList.add('error');
     statusText.textContent = 'Failed to load Google Sheet data';
+    refreshBtn.style.display = '';
     showError(`<strong>Could not load data from Google Sheets.</strong><br><br>
       Error: <code>${(err && err.message) ? err.message : 'unknown error'}</code><br><br>
       <strong>Most common fixes:</strong><br>
@@ -1374,6 +1403,7 @@ function initThemeToggle() {
 initThemeToggle();
 initKineticHeading();
 startScrollProgress();
+document.getElementById('refreshDataBtn').addEventListener('click', loadData);
 loadData();
 </script>
 </body>
