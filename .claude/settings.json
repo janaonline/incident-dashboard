@@ -54,7 +54,10 @@
       "Bash(node check_bbox_post.js)",
       "Bash(node verify_light.js)",
       "Bash(node zoom_jk3.js)",
-      "Bash(pkill -f \"http.server 8123\")"
+      "Bash(pkill -f \"http.server 8123\")",
+      "Bash(node \"C:/Users/PATTAB~1/AppData/Local/Temp/claude/d--projects-ai-website-learning/01a43e52-675b-4cb3-9bf4-e870f1c825a7/scratchpad/verify_city_chart.js\")",
+      "Bash(node verify_city_chart.js)",
+      "Bash(taskkill //F //PID 7968)"
     ],
     "additionalDirectories": [
       "C:\\tmp\\pw_verify",

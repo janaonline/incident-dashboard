@@ -232,16 +232,6 @@ body { font-family: var(--font); background: var(--bg-gradient); color: var(--te
 .acc-fill { height: 100%; border-radius: 4px; }
 .acc-note { font-size: 11px; color: var(--text-muted); margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); line-height: 1.6; }
 
-.inst-section { padding: clamp(18px,3vw,24px); }
-.inst-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-.inst-name { font-size: 12px; font-weight: 500; color: var(--text); flex: 0 0 220px; line-height: 1.35; }
-.inst-track { flex: 1; height: 20px; background: var(--track-bg); border-radius: 4px; overflow: hidden; }
-.inst-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; justify-content: flex-end; padding-right: 7px; min-width: 50px; }
-.inst-fill span { font-size: 10px; font-weight: 700; color: rgba(0,0,0,0.78); white-space: nowrap; }
-.inst-note { font-size: 11px; color: var(--text-muted); margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); line-height: 1.65; }
-.inst-note strong { color: var(--text); font-weight: 600; }
-.inst-role { font-size: 10.5px; color: var(--text-light); margin: -6px 0 10px 232px; line-height: 1.35; }
-@media (max-width:600px) { .inst-name { flex-basis: 100%; } .inst-row { flex-direction: column; align-items: flex-start; gap: 4px; } .inst-track { width: 100%; } .inst-role { margin-left: 0; } }
 
 .reform-banner { padding: clamp(20px,3vw,28px); display: flex; align-items: center; gap: clamp(20px,4vw,32px); flex-wrap: wrap; }
 .reform-num { font-family: var(--font-tight); font-size: clamp(48px,9vw,72px); font-weight: 800; color: var(--green); line-height: 1; letter-spacing: -2px; flex-shrink: 0; }
@@ -483,12 +473,10 @@ body { font-family: var(--font); background: var(--bg-gradient); color: var(--te
   </div>
 
   <div class="section reveal-section">
-    <div class="section-title">Who failed — institutions appearing most often</div>
-    <div class="section-desc">Computed live from the "Primary Responsible Institution" field across all incidents. One institution appears far more often than any other.</div>
-    <div class="inst-section glass-panel">
-      <div class="card-label">Top institutions by number of incidents as primary responsible body</div>
-      <div id="instBars"></div>
-      <div class="inst-note" id="instNote"></div>
+    <div class="section-title">Cities hit hardest — top 10 by incidents</div>
+    <div class="section-desc">The ten cities with the most recorded incidents (bars) and their combined death toll (line), computed live from the incident sheet.</div>
+    <div class="chart-card glass-panel">
+      <div class="chart-wrap tall"><canvas id="cityChart" role="img" aria-label="Combination chart showing incidents and deaths for the top 10 cities by incident count">Incidents and deaths for the top 10 cities, computed from live data.</canvas></div>
     </div>
   </div>
 
@@ -565,7 +553,7 @@ let INCIDENTS = [];
 let currentCat = 'All';
 let currentLang = 'en';
 let mapView = 'city';
-let catIncChart = null, catDeathChart = null, yearChart = null, preventChart = null, accChart = null;
+let catIncChart = null, catDeathChart = null, yearChart = null, preventChart = null, accChart = null, cityChart = null;
 
 const catColors = {
   'Crowd Management / Stampede': '#FF6B6B',
@@ -792,7 +780,7 @@ function renderAll() {
   renderYearChart();
   renderPreventChart();
   renderAccountability();
-  renderInstitutions();
+  renderCityChart();
   renderReform();
   renderFilters();
   renderIncidents();
@@ -1220,40 +1208,39 @@ function renderAccountability() {
 }
 
 /* ============================================================
-   INSTITUTIONS
+   CITY CHART
    ============================================================ */
-function renderInstitutions() {
+function renderCityChart() {
+  const ax = axisColors();
   const agg = {};
   INCIDENTS.forEach(i => {
-    const inst = i.primary_institution || 'Unknown';
-    if (!agg[inst]) agg[inst] = {count:0, deaths:0};
-    agg[inst].count++;
-    agg[inst].deaths += i.deaths;
+    const key = i.city + ', ' + i.state;
+    if (!agg[key]) agg[key] = {count:0, deaths:0};
+    agg[key].count++;
+    agg[key].deaths += i.deaths;
   });
-  const sorted = Object.entries(agg).sort((a,b)=>b[1].count-a[1].count).slice(0,8);
-  const max = sorted[0][1].count;
-  const colors = ['#FF5252','#F5A623','#FF6B6B','#6FCF6F','#5B9BD9','#9F97E8','#9A9890','#F472A0'];
+  const top = Object.entries(agg).sort((a,b)=>b[1].count-a[1].count).slice(0,10);
+  const labels = top.map(([city]) => city);
+  const counts = top.map(([,sd]) => sd.count);
+  const deaths = top.map(([,sd]) => sd.deaths);
 
-  document.getElementById('instBars').innerHTML = sorted.map(([name, sd], idx) => `
-    <div class="inst-row">
-      <div class="inst-name">${name}</div>
-      <div class="inst-track">
-        <div class="inst-fill" style="width:${Math.round(sd.count/max*100)}%;background:${colors[idx%colors.length]}">
-          <span>${sd.count} incidents</span>
-        </div>
-      </div>
-    </div>
-    <div class="inst-role">${sd.deaths.toLocaleString()} total deaths across these incidents</div>
-  `).join('');
-
-  const top = sorted[0];
-  const totalInstitutions = Object.keys(agg).length;
-  document.getElementById('instNote').innerHTML =
-    `<strong>${top[0]}</strong> is the single most prominent institution in this dataset, appearing as the primary
-     responsible body in <strong>${top[1].count} incidents</strong> with a combined death toll of
-     <strong>${top[1].deaths.toLocaleString()}</strong>. Failures are distributed across
-     <strong>${totalInstitutions} distinct bodies</strong> in total — indicating the problem is widespread across urban local governments, not confined
-     to a small number of underperforming institutions.`;
+  if (cityChart) cityChart.destroy();
+  cityChart = new Chart(document.getElementById('cityChart'), {
+    data:{
+      labels,
+      datasets:[
+        { type:'bar', label:'Incidents', data: counts, backgroundColor:'#5B9BD9', borderRadius:4, yAxisID:'y' },
+        { type:'line', label:'Deaths', data: deaths, borderColor:'#FF6B6B', backgroundColor:'#FF6B6B', tension:0.3, yAxisID:'y1', pointRadius:4, pointBackgroundColor:'#FF6B6B' }
+      ]
+    },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:true, position:'top', labels:{usePointStyle:true, color:ax.label, font:{family:'Inter',size:11}}}},
+      scales:{
+        x:{grid:{display:false}, ticks:{color:ax.muted, font:{family:'Inter',size:10}}},
+        y:{position:'left', title:{display:true,text:'Incidents',color:ax.label,font:{family:'Inter',size:11}}, grid:{display:false}, ticks:{color:ax.muted, font:{family:'Inter',size:10}}},
+        y1:{position:'right', title:{display:true,text:'Deaths',color:ax.label,font:{family:'Inter',size:11}}, grid:{display:false}, ticks:{color:ax.muted, font:{family:'Inter',size:10}}}
+      }}
+  });
 }
 
 /* ============================================================
@@ -1344,6 +1331,7 @@ function refreshThemedViews() {
   renderYearChart();
   renderPreventChart();
   renderAccountability();
+  renderCityChart();
   renderMap();
 }
 
