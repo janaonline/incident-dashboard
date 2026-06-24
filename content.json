@@ -5,11 +5,7 @@
     "title": "India Safety Dashboard",
     "tagline": "A data-driven look at governance failure patterns behind fatal public safety incidents in urban India, 2016-2026, based on open source data.",
     "heroImage": "images/image1.jpg",
-    "heroImageAlt": "Aerial view of a lakeside Indian town at golden hour, with dense waterside buildings reflected in the water.",
-    "cta": {
-      "label": "View the Live Dashboard",
-      "url": "dashboard/index.html"
-    }
+    "heroImageAlt": "Aerial view of a lakeside Indian town at golden hour, with dense waterside buildings reflected in the water."
   },
 
   "sections": [
@@ -46,8 +42,7 @@
   "footer": {
     "credit": "India Safety Dashboard - an open governance-data project by Janaagraha",
     "links": [
-      { "label": "View Dashboard", "url": "dashboard/index.html" },
-      { "label": "Contact", "url": "mailto:you@example.com" }
+      { "label": "View Dashboard", "url": "dashboard/index.html" }
     ]
   }
 }
