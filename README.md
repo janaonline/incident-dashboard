@@ -217,8 +217,8 @@ Horizontal bar chart showing what happens after each type of incident:
 
 Pattern: inquiry and compensation are consistently triggered. Court findings are rare. Convictions are absent.
 
-### 10. Top responsible institutions
-Horizontal bar chart of the 8 institutions appearing most often as the primary responsible body across incidents, ranked by incident count with total deaths shown per institution. The note below the chart also reports the live total count of distinct institutions across the full dataset.
+### 10. Cities hit hardest — top 10 by incidents
+Combination bar + line chart showing the ten cities with the most recorded incidents (bars) and their combined death toll (line), labeled `City, State`, ranked by incident count.
 
 ### 11. The reform record
 A single-number callout, computed live: how many incidents produced documented systemic reform, out of the total incident count — currently 1 out of the live total (the New Delhi Railway Station stampede, 2025, which resulted in crowd-control reform announcements). Every other incident's documented response ends at inquiry, compensation, or ongoing investigation.

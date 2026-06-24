@@ -403,7 +403,7 @@ Every row from the Google Sheet is normalised to this shape. Field names are mat
 | `brief_description` | string | |
 | `immediate_cause` | string | |
 | `governance_failure` | string | Free-text; regex-searched in several render functions |
-| `primary_institution` | string | Aggregated in institution ranking |
+| `primary_institution` | string | Regex-matched for the BMC narrative count (`renderNarrativeStats()`) and shown in each incident card's detail row |
 | `secondary_institution` | string | |
 | `regulatory_function_failed` | string | Regex-searched for `inspection` / `enforcement` |
 | `accountability_gap` | string | |
@@ -462,7 +462,7 @@ Each section of the page has a dedicated function. `renderAll()` calls all of th
 | `renderYearChart()` | Combo bar+line chart (incidents & deaths per year) |
 | `renderPreventChart()` | Preventability rating bar chart (ratings 3–5) |
 | `renderAccountability()` | Accountability funnel chart + text bars (FIR → conviction → reform), conviction/reform now computed live via `countConvictions()`/`countReform()` |
-| `renderInstitutions()` | Top 8 institutions ranked by incident count; note text also reports the live total distinct-institution count |
+| `renderCityChart()` | Combo bar+line chart (`#cityChart`) showing the top 10 cities by incident count (bars) and their combined death toll (line), labeled `"City, State"` — replaces the former institutions section, see note below |
 | `renderReform()` | Reform number, computed live via `countReform()` |
 | `renderFilters()` | Category filter tab bar |
 | `renderIncidents()` | Filterable incident card grid |
@@ -714,8 +714,7 @@ numbers quietly drifting from the live sheet:
 - Several **plain-prose numbers** were previously typed directly into
   static HTML and never updated (e.g. "across 77 fatal incidents" in the
   header/footer/reform-section copy, "the other 76" in a question card,
-  "more than 30 distinct bodies" in the institutions note, "10 incidents"
-  in the BMC question card). These are now `<span id="...">` placeholders
+  "10 incidents" in the BMC question card). These are now `<span id="...">` placeholders
   filled in by `renderNarrativeStats()` (called from `renderAll()`) instead
   of literals — see the function table above. If you add new prose that
   states a count, percentage, or other fact derivable from `INCIDENTS`,
