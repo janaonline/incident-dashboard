@@ -112,18 +112,16 @@ body { font-family: var(--font); background: var(--bg-gradient); color: var(--te
 
 .reveal-section { opacity: 0; transform: translateY(20px); transition: opacity 0.8s ease 0.15s, transform 0.8s ease 0.15s; }
 .reveal-section.is-visible { opacity: 1; transform: translateY(0); }
-.stat-card, .question-card { opacity: 0; transform: translateY(16px); transition: opacity 0.6s ease, transform 0.6s ease; }
-.reveal-section.is-visible .stat-card, .reveal-section.is-visible .question-card { opacity: 1; transform: translateY(0); }
-.stat-card:nth-child(1), .question-card:nth-child(1) { transition-delay: 0ms; }
-.stat-card:nth-child(2), .question-card:nth-child(2) { transition-delay: 70ms; }
-.stat-card:nth-child(3), .question-card:nth-child(3) { transition-delay: 140ms; }
-.stat-card:nth-child(4), .question-card:nth-child(4) { transition-delay: 210ms; }
-.question-card:nth-child(5) { transition-delay: 280ms; }
-.question-card:nth-child(6) { transition-delay: 350ms; }
+.stat-card { opacity: 0; transform: translateY(16px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.reveal-section.is-visible .stat-card { opacity: 1; transform: translateY(0); }
+.stat-card:nth-child(1) { transition-delay: 0ms; }
+.stat-card:nth-child(2) { transition-delay: 70ms; }
+.stat-card:nth-child(3) { transition-delay: 140ms; }
+.stat-card:nth-child(4) { transition-delay: 210ms; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .kinetic-heading .word, .reveal-section, .stat-card, .question-card {
+  .kinetic-heading .word, .reveal-section, .stat-card {
     transition: none !important; transform: none !important; opacity: 1 !important;
   }
   #scrollProgress { display: none; }
@@ -238,12 +236,6 @@ body { font-family: var(--font); background: var(--bg-gradient); color: var(--te
 .reform-text { flex: 1; min-width: 240px; }
 .reform-text h3 { font-family: var(--font-tight); font-size: 16px; font-weight: 700; margin-bottom: 6px; }
 .reform-text p { font-size: 12.5px; color: var(--text-muted); line-height: 1.6; }
-
-.questions-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 12px; }
-.question-card { padding: 14px 16px; }
-.question-num { font-family: var(--font-tight); font-size: 22px; font-weight: 800; color: var(--purple); line-height: 1; margin-bottom: 6px; }
-.question-title { font-size: 13px; font-weight: 600; margin-bottom: 5px; line-height: 1.35; }
-.question-text { font-size: 12px; color: var(--text-muted); line-height: 1.55; }
 
 .filter-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
 .ftab { padding: 5px 13px; border-radius: 20px; font-family: var(--font); font-size: 12px; font-weight: 500; border: 1px solid var(--border-md); background: rgba(255,255,255,0.06); color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
@@ -492,26 +484,13 @@ body { font-family: var(--font); background: var(--bg-gradient); color: var(--te
   </div>
 
   <div class="section reveal-section">
-    <div class="section-title">Key questions for policy and reform</div>
-    <div class="section-desc">These patterns point to questions for city administrators, regulators, and policymakers — framed as questions, not recommendations, because the appropriate response depends on institutional context.</div>
-    <div class="questions-grid">
-      <div class="question-card glass-panel"><div class="question-num">1</div><div class="question-title">Why does enforcement not follow inspection?</div><div class="question-text">Inspection and enforcement failures co-occur across incident types. Are inspections conducted, are findings recorded, and do findings trigger action?</div></div>
-      <div class="question-card glass-panel"><div class="question-num">2</div><div class="question-title">What explains BMC's concentration of incidents?</div><div class="question-text"><span id="bmcIncidentCount">—</span> incidents in one municipal body, all at high preventability, over a decade. Does this reflect scale, documentation quality, or institutional design?</div></div>
-      <div class="question-card glass-panel"><div class="question-num">3</div><div class="question-title">What happens to warnings?</div><div class="question-text">Prior warnings were documented in roughly half of incidents. What processes exist for recording, escalating, and acting on risk signals — and where do they break?</div></div>
-      <div class="question-card glass-panel"><div class="question-num">4</div><div class="question-title">What does the accountability process produce?</div><div class="question-text"><span id="convictionsQuestionText">—</span> convictions across a decade of fatal incidents raises questions about the gap between inquiry and adjudication.</div></div>
-      <div class="question-card glass-panel"><div class="question-num">5</div><div class="question-title">Which regulatory functions are under-resourced?</div><div class="question-text">Inspection and enforcement failures span fire safety, industrial safety, building standards, and crowd management — suggesting capacity constraints that cut across departments.</div></div>
-      <div class="question-card glass-panel"><div class="question-num">6</div><div class="question-title">What conditions produced the one reform?</div><div class="question-text">Understanding what made reform possible in the New Delhi Railway Station case — and absent in the other <span id="otherIncidentsCount">—</span> — is directly relevant to designing better accountability mechanisms.</div></div>
-    </div>
-  </div>
-
-  <div class="section reveal-section">
     <div class="section-title">Browse all incidents</div>
     <div class="filter-bar" id="catFilters"></div>
     <div class="incident-grid" id="incidentList"></div>
   </div>
 
   <div class="footer">
-    <strong>Data:</strong> <span id="totalIncidentsFooter">—</span> incidents compiled from news reports, Wikipedia, government inquiry records, court records, CAG reports, and credible media investigations (2016–2026). This dashboard renders live from a Google Sheet — the spreadsheet is the single source of truth. Source links for every incident are shown in its expanded card.<br><br>
+    <strong>Data:</strong> <span id="totalIncidentsFooter">—</span> incidents compiled from news reports, government inquiry records, court records, CAG reports, and credible media investigations (2016–2026). This dashboard renders live from a Google Sheet — the spreadsheet is the single source of truth. Source links for every incident are shown in its expanded card.<br><br>
     <strong>Methodology notes:</strong> Some incidents appear as near-duplicate entries reflecting multiple source reports of the same event — all rows are retained as documented in the source dataset. Map coordinates are city-level approximations geocoded from location names, not precise incident-site coordinates. The governance failure prevalence chart (Section "Governance failure patterns") reflects published aggregate findings from the original 26-category coding and is shown as a standalone reference, not re-derived from this sheet.<br><br>
     <strong>Branding:</strong> India Safety Dashboard — Based on Open Source Data &nbsp;|&nbsp; Suggestions &amp; corrections welcome via the source spreadsheet.
   </div>
@@ -802,18 +781,10 @@ function renderStats() {
 
 function renderNarrativeStats() {
   const total = INCIDENTS.length;
-  const conviction = countConvictions();
-  const reform = countReform();
-  const bmcCount = INCIDENTS.filter(i =>
-    /bmc|brihanmumbai/i.test(i.primary_institution) || /bmc|brihanmumbai/i.test(i.secondary_institution)
-  ).length;
 
   document.getElementById('totalIncidentsHeader').textContent = total;
   document.getElementById('totalIncidentsFooter').textContent = total;
   document.getElementById('totalIncidentsReform').textContent = total;
-  document.getElementById('otherIncidentsCount').textContent = total - reform;
-  document.getElementById('bmcIncidentCount').textContent = bmcCount;
-  document.getElementById('convictionsQuestionText').textContent = conviction === 0 ? 'Zero' : conviction;
 }
 
 function renderHero() {
